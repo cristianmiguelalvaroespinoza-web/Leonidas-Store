@@ -1,0 +1,404 @@
+/* Panelinformes.module.css */
+
+.container {
+    padding: 30px;
+    color: white;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 20px;
+}
+
+.header h1 {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #00ff7f;
+    margin: 0;
+}
+
+.header p {
+    color: #94a3b8;
+    margin-top: 10px;
+}
+
+.mainGrid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 30px;
+    align-items: start;
+}
+
+/* Tarjetas de Resumen superior */
+.cardsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: #1a1d23;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.card.recaudado { border-top: 4px solid #00ff7f; }
+.card.tienda { border-top: 4px solid #3b82f6; }
+.card.vendido { border-top: 4px solid #a855f7; }
+
+.card span {
+    font-size: 0.75rem;
+    display: block;
+    margin-top: 10px;
+    color: #94a3b8;
+}
+
+.card h2 {
+    font-size: 1.6rem;
+    margin: 5px 0;
+}
+
+/* Secciones oscuras de configuración y tablas */
+.seccionOscura {
+    background: #1a1d23;
+    padding: 35px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.seccionOscura h3 {
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+    color: #00ff7f;
+}
+
+/* Controles de fecha y botones de periodo */
+.controlesPeriodo {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.btnPeriodo {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: #1e293b;
+    color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s all ease;
+}
+
+.btnPeriodoActive {
+    background: #00ff7f;
+    color: #000;
+}
+
+.inputDateContainer {
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 0 15px;
+    border: 1px solid #334155;
+}
+
+.inputDateContainerActive {
+    border: 2px solid #00ff7f;
+}
+
+.inputDate {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 12px 0;
+    outline: none;
+}
+
+/* Botones de acción (PDF, Excel, etc) */
+.gridAcciones {
+    display: grid;
+    gap: 15px;
+}
+
+.btnAccion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: 0.3s all ease;
+}
+
+.btnPdf { border: 1px solid #00ff7f; color: #00ff7f; }
+.btnExcel { border: 1px solid #34d399; color: #34d399; }
+.btnMail { border: 1px solid #ffffff; color: #ffffff; }
+.btnWhatsapp { border: 1px solid #25d366; color: #25d366; }
+
+.btnAccion:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+/* Mini Controles de la Tabla */
+.controlesTabla {
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    gap: 5px;
+}
+
+.btnMini {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.7rem;
+    font-weight: bold;
+    cursor: pointer;
+    background: transparent;
+    color: #94a3b8;
+    transition: 0.3s;
+}
+
+.btnMiniActive {
+    background: #00ff7f;
+    color: #000;
+}
+
+/* Tabla de rendimiento */
+.tablaLeonidas {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.tablaLeonidas thead tr {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.rowVendedor {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.rowVendedor:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.cantidadBadge {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.btnAccionPequeno {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: 0.3s all ease;
+}
+
+/* Consolidado final */
+.consolidado {
+    margin-top: 30px;
+    padding: 20px;
+    background: rgba(0, 255, 127, 0.05);
+    border-radius: 15px;
+    border: 1px dashed rgba(0, 255, 127, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.consolidado span:first-child {
+    color: #00ff7f;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.consolidado span:last-child {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #00ff7f;
+}
+
+/* =========================================
+   ESTILOS PARA LA VENTANA SOBREPUESTA (MODAL)
+   ========================================= */
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.modalPanel {
+    background-color: #111827;
+    border-radius: 20px;
+    width: 95%;
+    max-width: 650px;
+    max-height: 85vh;
+    border: 2px solid #00ff7f; /* Borde Neón Leonidas */
+    box-shadow: 0 0 40px rgba(0, 255, 127, 0.2);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    color: white;
+    position: relative;
+}
+
+.modalHeader {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.modalHeaderTitle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: #00ff7f;
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.modalHeaderSub {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+/* --- MEJORA DE LOS ITEMS (CUADRITOS) --- */
+.ventaItem {
+    background-color: #1a1d23; /* Fondo oscuro igual a tus otras secciones */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Borde suave */
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.ventaItem:hover {
+    border-color: #00ff7f; /* Se ilumina al pasar el mouse */
+    transform: translateY(-2px);
+    background-color: #242830;
+}
+
+.ventaDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ventaModel {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Un pequeño badge para el número de serie */
+.serialBadge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    background: #0f172a;
+    color: #94a3b8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #334155;
+}
+
+.ventaSpecs {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px 10px;
+    border-radius: 6px;
+    width: fit-content;
+}
+
+.ventaPriceInfo {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.ventaPrice {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #00ff7f;
+    text-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+}
+
+.ventaSeller {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #60a5fa; /* Azul para resaltar al vendedor */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.btnCancelarModal {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px;
+    width: 100%;
+    border-radius: 12px;
+    transition: 0.3s;
+}
+
+.btnCancelarModal:hover {
+    background: #ef4444;
+    color: #fff;
+}

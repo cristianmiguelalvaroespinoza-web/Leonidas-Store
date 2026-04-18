@@ -1,0 +1,1219 @@
+/* ============================================================
+   1. VARIABLES Y CONFIGURACIÓN GLOBAL
+   ============================================================ */
+:root {
+  --fondo: #020617;
+  --panel: #0f172a;
+  --tarjeta: #1e293b;
+  --indigo: #6366f1;
+  --esmeralda: #10b981;
+  --rojo: #f43f5e;
+  --amarillo: #eab308;
+  --texto-suave: #94a3b8;
+  --borde: rgba(255, 255, 255, 0.1);
+  --sombra: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --fuente: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--fondo);
+  color: #ffffff;
+  font-family: var(--fuente);
+  overflow-x: hidden;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   2. LOGIN (GLASSMORPHISM)
+   ============================================================ */
+#login-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top right, #1e293b, #020617);
+}
+
+.login-box {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(15px);
+  padding: 40px;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 380px;
+  border: 1px solid var(--borde);
+  text-align: center;
+  box-shadow: var(--sombra);
+}
+
+.login-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 22px;
+  margin-bottom: 20px;
+  border: 2px solid var(--indigo);
+  object-fit: cover;
+}
+
+.login-field {
+  width: 100%;
+  padding: 14px;
+  background: rgba(2, 6, 23, 0.8) !important;
+  border: 1px solid var(--borde) !important;
+  border-radius: 12px;
+  color: white !important;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  outline: none;
+  text-align: center;
+}
+
+.login-field:focus { border-color: var(--indigo) !important; }
+
+.login-button {
+  width: 100%;
+  padding: 15px;
+  background: var(--esmeralda);
+  color: var(--fondo);
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.3s;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   3. NAVEGACIÓN (HEADER) - CORREGIDO
+   ============================================================ */
+
+.blue-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px; /* Un poco más de aire a los lados */
+    background: rgba(15, 23, 42, 0.9); /* Transparencia sutil */
+    backdrop-filter: blur(12px); /* Efecto cristal */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 80px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Bloque Izquierda: Identidad */
+.brand-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+}
+
+.nav-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px; /* Menos circular, más "app" moderna */
+    object-fit: cover;
+    border: 2px solid var(--indigo);
+    transition: transform 0.3s ease;
+}
+
+.nav-logo:hover {
+    transform: rotate(-5deg) scale(1.1);
+}
+
+.welcome-badge {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--texto-suave);
+    margin: 0;
+}
+
+.role-badge {
+    font-size: 0.65rem;
+    background: rgba(99, 102, 241, 0.15); /* Color de tu variable indigo */
+    padding: 3px 10px;
+    border-radius: 6px;
+    color: var(--indigo);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+/* Bloque Centro: Botones de Acción */
+/* ============================================================
+   BOTONES DE ACCIÓN (ALMACÉN Y EXCEL LOCAL)
+   ============================================================ */
+
+/* Contenedor de botones en la celda */
+.acciones-cell {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+/* Estilo base para todos los botones de iconos */
+.btn-accion-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1.1rem;
+    position: relative;
+}
+
+/* 1. Botón Ver Imagen (Ojo) */
+.btn-ver-img {
+    color: #60a5fa; /* Azul claro */
+}
+.btn-ver-img:hover {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: #60a5fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+/* 2. Botón Enviar a Cliente / WhatsApp */
+.btn-enviar-cliente {
+    color: #10b981; /* Verde esmeralda */
+}
+.btn-enviar-cliente:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* 3. Botón Editar (Lápiz) */
+.btn-editar-laptop {
+    color: #fbbf24; /* Ámbar/Amarillo */
+}
+.btn-editar-laptop:hover {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+/* 4. Botón Eliminar (Papelera) */
+.btn-eliminar-laptop {
+    color: #f87171; /* Rojo suave */
+}
+.btn-eliminar-laptop:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: #f87171;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(248, 113, 113, 0.3);
+}
+
+/* Efecto de clic para todos */
+.btn-accion-icon:active {
+    transform: scale(0.9);
+}
+
+/* Tooltip simple (opcional: muestra el nombre al pasar el mouse) */
+.btn-accion-icon:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex: 2;
+}
+
+.nav-btn {
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto-suave);
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-btn.active {
+    background: rgba(37, 99, 235, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+/* Bloque Derecha: Salida */
+.exit-section {
+    display: flex;
+    justify-content: flex-end;
+    flex: 1;
+}
+
+/* Rediseño del Botón de Salir */
+.btn-exit {
+    background: rgba(244, 63, 94, 0.1) !important;
+    color: #f43f5e !important;
+    padding: 10px 20px !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(244, 63, 94, 0.2) !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease !important;
+}
+
+.btn-exit:hover {
+    background: #f43f5e !important;
+    color: #fff !important;
+    box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
+}
+
+/* ============================================================
+   5. ALMACÉN: TABLA Y BUSCADOR (CORREGIDO)
+   ============================================================ */
+
+/* Barra de búsqueda y filtros superior */
+.search-container-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    padding: 20px 25px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--borde);
+    gap: 20px;
+}
+
+.search-box-wrapper {
+    display: flex;
+    align-items: center;
+    background: #020617;
+    border: 1px solid var(--borde);
+    padding: 10px 15px;
+    border-radius: 12px;
+    flex: 2; /* El buscador toma más espacio */
+    transition: border-color 0.3s;
+}
+
+.search-box-wrapper:focus-within {
+    border-color: var(--indigo);
+}
+
+.search-input-modern {
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    margin-left: 10px;
+    width: 100%;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+/* La Tabla de Equipos */
+.table-container {
+    overflow-x : auto;
+    background: transparent; /* Dejamos que las filas resalten */
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 10px; /* Separación entre laptops */
+}
+
+table th {
+    padding: 15px 20px;
+    color: var(--texto-suave);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: left;
+}
+
+table tr {
+    transition: transform 0.2s ease;
+}
+
+table td {
+    background: var(--panel); /* Fondo para cada fila */
+    padding: 18px 20px;
+    color: #e2e8f0;
+    border-top: 1px solid var(--borde);
+    border-bottom: 1px solid var(--borde);
+}
+
+/* Redondear las filas individualmente */
+table td:first-child { 
+    border-left: 1px solid var(--borde); 
+    border-radius: 15px 0 0 15px; 
+    font-weight: 700;
+    color: #fff;
+}
+
+table td:last-child { 
+    border-right: 1px solid var(--borde); 
+    border-radius: 0 15px 15px 0; 
+}
+
+/* Efecto al pasar el mouse sobre una laptop */
+table tr:hover td {
+    background: #1e293b;
+    transform: scale(1.005);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================================
+   6. REPORTES (SIDEBAR DERECHA)
+   ============================================================ */
+.btn-send-report {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--indigo) 0%, #4338ca 100%);
+    color: white;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+.btn-send-report:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-accion {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--borde);
+    color: var(--texto-suave);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-accion:hover {
+    background: var(--indigo);
+    color: white;
+    border-color: transparent;
+}
+
+.btn-eliminar:hover {
+    background: var(--rojo);
+}
+
+/* ============================================================
+   7. RESPONSIVE (ADAPTABILIDAD)
+   ============================================================ */
+@media (max-width: 1100px) {
+    .dual-container { 
+        flex-direction: column; 
+        align-items: center;
+    }
+    .formulario-leonidas { 
+        min-width: 100%; 
+    }
+    .reporte-integrado-panel {
+        width: 100%;
+        min-width: 100%;
+    }
+    .blue-nav { 
+        flex-direction: column; 
+        padding: 15px;
+        gap: 15px; 
+        height: auto;
+    }
+    .nav-actions { 
+        width: 100%; 
+        flex-wrap: wrap; 
+    }
+}
+
+/* ============================================================
+   8. ESTILOS GLOBALES DE INPUTS (UNIFICADO)
+   ============================================================ */
+
+/* Forzar todos los cuadros a estilo oscuro premium */
+input, select, textarea, :where(input, select, textarea) {
+    background-color: #020617 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    padding: 12px 15px !important;
+    font-family: var(--fuente);
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    box-sizing: border-box;
+}
+
+/* Efecto Focus */
+input:focus, select:focus, textarea:focus {
+    border-color: var(--indigo) !important;
+    background-color: #0f172a !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
+
+::placeholder {
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+/* Corrección de fondo blanco en Autocompletado de Chrome */
+input:-webkit-autofill {
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0px 1000px #020617 inset !important;
+}
+
+/* Estilo para los Labels */
+.campo label {
+    color: var(--texto-suave);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* ============================================================
+   9. BOTÓN DE SALIDA (DISEÑO FINAL)
+   ============================================================ */
+.btn-exit {
+    background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%) !important;
+    color: white !important;
+    padding: 10px 22px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-exit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-exit:active {
+    transform: scale(0.96);
+}
+
+/* Agregando un pequeño icono de salida si lo usas en el HTML */
+.btn-exit::before {
+    font-size: 1.1rem;
+    filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+    transition: transform 0.3s ease;
+}
+
+.btn-exit:hover::before {
+    transform: translateX(-3px); /* Pequeña animación al pasar el mouse */
+}
+
+/* 2. Labels (Nombres de los campos) */
+.campo label {
+    color: var(--texto-suave);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    display: block;
+    opacity: 0.8;
+}
+
+/* 3. Normalización de Cuadros (Inputs, Selects, Textarea) */
+/* Eliminamos el :where antiguo por uno más específico y limpio */
+input, 
+select, 
+textarea {
+    background-color: #020617 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important; /* Bordes más redondeados para look moderno */
+    padding: 12px 16px !important;
+    font-family: var(--fuente);
+    font-size: 0.9rem;
+    width: 100%;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: all 0.3s ease;
+}
+
+/* 4. Solución Definitiva al Autocompletado de Chrome */
+/* Esto evita que el cuadro se ponga blanco o amarillo al sugerir datos */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px #020617 inset !important;
+    caret-color: white; /* Color del palito que parpadea al escribir */
+}
+
+/* 5. Estilo de los Selects (Listas desplegables) */
+select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 15px;
+    padding-right: 40px !important;
+}
+
+select option {
+    background-color: #0f172a; /* Fondo oscuro para las opciones */
+    color: white;
+    padding: 12px;
+}
+/* ============================================================
+   ORDEN Y ESPACIADO (LEONIDAS STORE) - UNIFICADO
+   ============================================================ */
+
+/* Contenedor principal debajo del Header */
+main {
+    padding: 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px; 
+}
+
+/* Contenedores base (Formulario, Inventario, Tablas) */
+.formulario-leonidas, 
+.inventory-view,
+.table-container,
+.excel-local-container {
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid var(--borde);
+    box-shadow: var(--sombra);
+    margin-bottom: 20px;
+}
+
+/* Separación de la barra de búsqueda y filtros */
+.almacen-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* Contenedor de herramientas (Buscador + Fecha + Botones) */
+.search-container-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.5); /* var(--tarjeta) con transparencia */
+    padding: 15px 25px;
+    border-radius: 16px;
+    gap: 20px;
+    border: 1px solid var(--borde);
+}
+
+.search-box-wrapper {
+    display: flex;
+    align-items: center;
+    background: #020617;
+    border: 1px solid var(--borde);
+    padding: 10px 18px;
+    border-radius: 12px;
+    flex: 1;
+}
+
+.search-input-modern {
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    margin-left: 10px;
+    width: 100%;
+    outline: none;
+    box-shadow: none !important;
+}
+
+/* Barra de estadísticas */
+.stats-bar {
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* ============================================================
+   MODALES Y GALERÍA (UX MEJORADA)
+   ============================================================ */
+
+.modal-overlay.active {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(2, 6, 23, 0.95); /* Fondo casi negro */
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content-galeria {
+    background: #0f172a; /* Fondo ultra oscuro */
+    padding: 24px;
+    border-radius: 28px;
+    max-width: 900px; /* Tamaño controlado */
+    width: 95%;
+    max-height: 92vh;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Borde sutil */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 
+                0 25px 60px -12px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* El contenedor que sostiene la imagen (El "Escenario") */
+.galeria-main-wrapper {
+    background: radial-gradient(circle at center, #1e293b 0%, #040913 100%);
+    border-radius: 20px;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 500px; /* Altura fija para consistencia */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+}
+
+.galeria-imagen-principal {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 12px;
+    object-fit: contain;
+    /* Sombra proyectada por la laptop */
+    filter: drop-shadow(0 15px 30px rgba(0,0,0,0.8));
+    transition: transform 0.5s ease;
+}
+
+.galeria-imagen-principal:hover {
+    transform: scale(1.02); /* Pequeño zoom al pasar el mouse */
+}
+
+/* Animación de entrada suave */
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.galeria-thumbnails-bar {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
+    padding-bottom: 5px;
+}
+
+.galeria-thumb {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.galeria-thumb:hover {
+    opacity: 1;
+    transform: translateY(-3px);
+}
+
+.galeria-thumb.active {
+    opacity: 1;
+    border-color: var(--indigo);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+/* ============================================================
+   BOTONES PEQUEÑOS DE ACCIÓN (TABLA ALMACÉN)
+   ============================================================ */
+
+/* Contenedor para alinear los botones en la celda */
+.acciones-container {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+/* Base común para botones pequeños */
+.btn-view-small, 
+.btn-edit-small, 
+.btn-delete-small {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1rem;
+    padding: 0;
+}
+
+/* Efecto de presión al hacer clic */
+.btn-view-small:active, 
+.btn-edit-small:active, 
+.btn-delete-small:active {
+    transform: scale(0.9);
+}
+
+/* 1. Botón VER (Ojo / Azul) */
+.btn-view-small {
+    color: #60a5fa;
+}
+
+.btn-view-small:hover {
+    background: rgba(96, 165, 250, 0.15);
+    border-color: #60a5fa;
+    color: #93c5fd;
+    box-shadow: 0 0 12px rgba(96, 165, 250, 0.2);
+}
+
+/* 2. Botón EDITAR (Lápiz / Ámbar) */
+.btn-edit-small {
+    color: #fbbf24;
+}
+
+.btn-edit-small:hover {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: #fbbf24;
+    color: #fcd34d;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.2);
+}
+
+/* 3. Botón ELIMINAR (Papelera / Rojo) */
+.btn-delete-small {
+    color: #f87171;
+}
+
+.btn-delete-small:hover {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: #f87171;
+    color: #fca5a5;
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.2);
+}
+/* ============================================================
+   BOTONES DE CONTROL (EXCEL Y FILTROS)
+   ============================================================ */
+
+/* 1. Botón Descargar Excel (Estilo Microsoft Pro) */
+.btn-excel-download {
+    background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(22, 101, 52, 0.2);
+}
+
+.btn-excel-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(22, 101, 52, 0.4);
+    background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+}
+
+.btn-excel-download::before {
+    content: "📊"; /* O icono de Excel */
+    font-size: 1.1rem;
+}
+
+/* 2. Botón Mostrar Todo (Estilo Limpieza / Reset) */
+.btn-show-all {
+    background: rgba(51, 65, 85, 0.5); /* Slate suave */
+    color: #f1f5f9;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-show-all:hover {
+    background: #475569;
+    border-color: var(--indigo);
+    color: white;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+}
+
+.btn-show-all::before {
+    content: "🔄"; 
+    font-size: 1rem;
+}
+
+/* Efecto común al presionar */
+.btn-excel-download:active, 
+.btn-show-all:active {
+    transform: scale(0.96);
+}
+/* =========================================
+   ESTILO MODERNO PARA EL VISOR DE IMÁGENES
+   ========================================= */
+
+/* 1. El fondo que cubre toda la pantalla (Overlay) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Fondo muy oscuro y traslúcido */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Asegura que esté por encima de todo */
+    backdrop-filter: blur(5px); /* Efecto de desenfoque al fondo */
+    transition: opacity 0.3s ease;
+}
+
+/* 2. El cuadro del visor (Contenedor) */
+.image-viewer-card {
+    background-color: #0f172a; /* Mismo tono oscuro que las filas de tu tabla */
+    padding: 25px;
+    border-radius: 16px; /* Bordes más redondeados y modernos */
+    border: 1px solid rgba(255, 255, 255, 0.08); /* Borde sutil */
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); /* Sombra profunda y dramática */
+    max-width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    transform: scale(0.9); /* Efecto de entrada */
+    animation: viewerAppear 0.3s forwards ease-out;
+}
+
+/* Animación de entrada */
+@keyframes viewerAppear {
+    to {
+        transform: scale(1);
+    }
+}
+
+/* 3. La imagen dentro del visor */
+.viewer-image {
+    max-width: 100%;
+    max-height: 70vh; /* Controla la altura para que no corte el botón */
+    border-radius: 12px;
+    object-fit: contain; /* Asegura que la laptop se vea completa sin estirarse */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    border: 2px solid #1e293b; /* Borde interior para la imagen */
+}
+
+/* 4. El botón CERRAR (Estilo elegante y minimalista) */
+.btn-viewer-close {
+    background: transparent;
+    border: 2px solid #3b82f6; /* Borde azul Leonidas */
+    color: #3b82f6;
+    padding: 10px 30px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.btn-viewer-close:hover {
+    background-color: #3b82f6; /* Fondo azul al pasar el mouse */
+    color: white;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); /* Resplandor azul */
+}
+/* Botón X superior derecho */
+.close-x-galeria {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.05); /* Fondo casi invisible */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8; /* Gris azulado suave */
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+}
+
+.close-x-galeria:hover {
+    background: rgba(239, 68, 68, 0.15); /* Rojo muy sutil */
+    border-color: #ef4444; /* Borde rojo brillante */
+    color: #ef4444;
+    transform: rotate(90deg); /* Efecto de giro al hover */
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+}
+.close-x-galeria, .btn-close-modal-galeria {
+    animation: fadeInButtons 0.6s ease forwards;
+}
+
+@keyframes fadeInButtons {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+/* DISEÑO PROFESIONAL PARA EL BOTÓN DE INFORME */
+.btn-header-report {
+    background: rgba(16, 185, 129, 0.05); /* Fondo verde esmeralda muy sutil */
+    color: #10b981; /* Color verde esmeralda */
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.btn-header-report:hover {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-header-report:active {
+    transform: translateY(0);
+}
+
+.btn-header-report:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+input[type="date"] {
+    background-color: #ffffff !important; /* Fondo blanco puro */
+    color: #020617 !important;           /* Texto negro oscuro para que se vea */
+    color-scheme: light !important;      /* Fuerza al navegador a usar el diseño claro */
+    border: 2px solid #3b82f6 !important; /* Un borde azul para que resalte en el fondo oscuro */
+    font-weight: 700 !important;
+}
+
+/* Asegura que el icono del calendario sea negro y visible */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0) !important; 
+    cursor: pointer;
+}
+
+/* Estilo cuando pasas el mouse por encima */
+input[type="date"]:hover {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5) !important;
+}
+/* Optimización para botones de escáner en móvil */
+@media (max-width: 768px) {
+  .campo div {
+    height: 45px; /* Más altos para que sea fácil acertar con el dedo */
+  }
+  
+  button[type="button"] {
+    min-width: 50px;
+    font-size: 1.2rem;
+  }
+
+  #reader {
+    width: 100% !important;
+    border: none !important;
+  }
+}
+#reader {
+    border: none !important;
+    width: 100% !important;
+    max-width: 350px !important;
+    margin: 0 auto !important;
+}
+
+/* 2. Ocultar textos basura de la librería que ocupan espacio */
+#reader__dashboard_section_csr button {
+    padding: 8px 12px !important;
+    text-transform: uppercase;
+    font-weight: bold;
+    background-color: var(--indigo) !important;
+    color: white !important;
+    border-radius: 5px !important;
+    border: none !important;
+}
+
+/* 3. Hacer que el video sea responsivo */
+#reader video {
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 8px;
+}
+
+/* 4. Quitar el mensaje de "Request Camera Permissions" gigante */
+#reader__status_span {
+    font-size: 0.8rem !important;
+    color: var(--texto-suave) !important;
+}
+
+/* 5. Ajustar el área de escaneo para que no sea un cuadrado gigante */
+#reader__scan_region {
+    background: #000 !important;
+}
+/* Estilo para el avatar cuando es un emoji (Leonidas Store) */
+.nav-logo-emoji {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Redondo como el logo original */
+  background: rgba(255, 255, 255, 0.1); /* Fondo suave */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem; /* Tamaño grande del emoji */
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  margin-right: 10px; /* Separación de Leonidas Store */
+}
+
+.report-btn {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.report-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+/* --- TABLA DE REPORTES (ESTILO EXCEL) --- */
+/* Específico para el buscador de Almacén */
+.search-box-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px; /* Posición de la lupa */
+  z-index: 10;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.search-input-modern {
+  width: 100%;
+  height: 45px;
+  /* ESTO ES LO QUE EVITA QUE SE TRAPE EL TEXTO */
+  padding-left: 45px !important; 
+  
+  background: #1e293b; /* Color oscuro de Almacén */
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: white;
+}
