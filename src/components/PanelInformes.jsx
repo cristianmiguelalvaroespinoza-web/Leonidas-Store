@@ -87,7 +87,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
       alert("Hubo un error al generar el archivo.");
     }
   };
-
+//revision leonidas store Final
   // DESCARGA TODAS LAS VENTAS REGISTRADAS EN LA DB (HISTÓRICO COMPLETO)
   const descargarRegistroVentas = () => {
     try {
