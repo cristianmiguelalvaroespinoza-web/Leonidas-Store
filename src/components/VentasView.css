@@ -1,0 +1,856 @@
+/* ============================================================
+   ESTILOS GENERALES Y CABECERA
+   ============================================================ */
+
+.ventas-view-container {
+  padding: 20px;
+  background-color: #020617; /* Fondo ultra oscuro */
+  min-height: 100vh;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between; /* Título a la izquierda, controles a la derecha */
+  align-items: center;
+  padding: 20px;
+  background: #0f1116;
+  border-bottom: 1px solid #2d333b;
+  flex-wrap: wrap; /* Para que en pantallas chicas no se rompa */
+  gap: 15px;
+}
+
+.header-controls-ventas {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Espacio uniforme entre Botón, Calendario y Buscador */
+}
+
+.report-btn-wa {
+  border: 2px solid #25d366;
+  color: #25d366;
+  background: rgba(37, 211, 102, 0.1);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.report-btn-wa:hover {
+  background: #25d366;
+  color: white;
+}
+
+/* ============================================================
+   SECCIÓN DE BÚSQUEDA (EL BUSCADOR Y LOS FILTROS)
+   ============================================================ */
+
+.seccion-busqueda-ventas {
+  display: flex;
+  flex-direction: row; 
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  background: #111827;
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid #1f2937;
+  margin-bottom: 20px;
+  flex-wrap: wrap; 
+}
+
+.busqueda-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 350px; 
+  flex: 2;
+}
+
+.busqueda-wrapper .icono-lupa {
+  position: absolute;
+  left: 18px;
+  z-index: 10;
+  pointer-events: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+}
+
+.input-ventas-moderno {
+  width: 100%;
+  height: 48px;
+  background-color: #030712 !important;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  color: white;
+  padding-left: 55px !important; 
+  outline: none;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.input-ventas-moderno:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================================
+   CONTROLES ADICIONALES (FECHA Y BOTONES)
+   ============================================================ */
+
+.controles-adicionales-ventas {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.grupo-fecha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grupo-fecha label {
+  color: #94a3b8;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.input-fecha-ventas {
+  padding: 10px;
+  border-radius: 8px;
+  background: #030712;
+  border: 1px solid #374151;
+  color: white;
+  outline: none;
+  cursor: pointer;
+}
+
+.btn-ver-todo-ventas {
+  background: #2d333b;
+  color: #00ff7f; /* Verde neón de Leonidas Store */
+  border: 1px solid #3f4451;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  transition: 0.3s;
+}
+
+.btn-ver-todo-ventas:hover {
+  background: #3f4451;
+  transform: translateY(-1px);
+}
+
+.input-calendar-ventas {
+  background: #1a1d23;
+  color: white;
+  border: 1px solid #3f4451;
+  padding: 7px 10px;
+  border-radius: 6px;
+  outline: none;
+  font-family: inherit;
+}
+/* ============================================================
+   ESTADÍSTICAS Y TABLA
+   ============================================================ */
+
+.stats-bar-ventas {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: inline-block;
+  font-weight: bold;
+  font-size: 13px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  margin-bottom: 20px;
+}
+
+.contenedor-filtros-marcas {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scrollbar-width: none;
+}
+
+.btn-marca {
+  padding: 8px 20px;
+  border-radius: 25px; 
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.btn-marca.active-marca {
+  background: #3b82f6; 
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-vender-ahora {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-vender-ahora:hover {
+  transform: scale(1.05);
+  background: #059669;
+}
+
+.tag-vendido {
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* ============================================================
+   NUEVOS ESTILOS PARA EL INFORME TÉCNICO (MODAL)
+   ============================================================ */
+
+.overlay-informe-leonidas {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85); /* Fondo oscuro */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Super importante para que flote sobre todo */
+}
+
+.contenedor-informe-factura {
+  background: white;
+  color: #1f2937;
+  /* OCUPAR CASI TODA LA PANTALLA */
+  width: 98% !important; 
+  height: 95vh !important; /* 95% del alto de la pantalla */
+  
+  max-width: 1400px !important; /* Límite para que no se deforme en monitores gigantes */
+  border-radius: 12px;
+  box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+  
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden; /* El scroll lo manejará el cuerpo */
+  animation: modalEntradaRapida 0.2s ease-out;
+}
+
+@keyframes modalEntradaRapida {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* AJUSTES PARA QUE EL CONTENIDO SE VEA GRANDE Y PROFESIONAL */
+.cuerpo-informe {
+  padding: 50px 80px !important; /* Mucho aire a los lados */
+  flex-grow: 1;
+  overflow-y: auto; /* Si hay mucha info, sale scroll interno */
+}
+
+/* GRID DE DETALLES EN FORMATO GRANDE */
+.grid-detalles-factura {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px !important;
+  margin-top: 30px;
+}
+
+/* ETIQUETAS Y TEXTOS */
+.item-detalle label {
+  font-size: 1rem !important;
+  color: #64748b;
+  letter-spacing: 1px;
+}
+
+.item-detalle p {
+  font-size: 1.6rem !important; /* Texto muy legible */
+  margin-top: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* PRECIO GIGANTE */
+.item-detalle-precio {
+  grid-column: span 2;
+  background: #f0fdf4;
+  padding: 30px;
+  border-radius: 20px;
+  border: 2px solid #10b981;
+  margin-top: 20px;
+}
+
+.item-detalle-precio label {
+  font-size: 1.2rem !important;
+  color: #047857;
+}
+
+.item-detalle-precio h3 {
+  font-size: 5rem !important; /* Precio impacto total */
+  margin: 10px 0 0;
+  color: #10b981;
+}
+
+/* PIE DE PÁGINA FIJO ABAJO */
+.footer-informe {
+  padding: 30px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-accion-imprimir {
+  font-size: 1.2rem;
+  padding: 15px 40px;
+  border-radius: 50px; /* Botón tipo cápsula */
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.header-informe {
+  background: #1e293b;
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-leonidas h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: #00ff7f; /* Color Leonidas */
+}
+
+.logo-leonidas p {
+  font-size: 0.8rem;
+  margin: 0;
+  opacity: 0.8;
+}
+
+.btn-cerrar-informe {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 5px;
+  transition: transform 0.2s;
+}
+
+.btn-cerrar-informe:hover {
+  transform: scale(1.2);
+  color: #ef4444;
+}
+
+.cuerpo-informe {
+  padding: 25px;
+}
+
+.titulo-seccion-informe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #334155;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 10px;
+}
+
+.grid-detalles-factura {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.item-detalle label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.item-detalle p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.item-detalle-precio {
+  grid-column: span 2;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+}
+
+.item-detalle-precio h3 {
+  margin: 5px 0 0;
+  font-size: 2rem;
+  color: #10b981;
+}
+
+.footer-informe {
+  padding: 20px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-informe {
+  padding: 30px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.grupo-botones-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 15px; /* Espacio entre los botones */
+  width: 100%;
+}
+
+.grupo-botones-acciones button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  color: white;
+}
+
+/* Colores */
+.btn-accion-imprimir { background: #3b82f6; }
+.btn-accion-pdf { background: #ef4444; }
+.btn-accion-whatsapp { background: #25d366; }
+
+.grupo-botones-acciones button:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.1);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.input-nombre-cliente {
+  width: 100%;
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #ffd700;
+  color: white;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+.seccion-formulario-venta {
+  padding: 20px;
+  background: rgba(255, 215, 0, 0.05);
+  border-radius: 8px;
+}
+/* =========================================
+   DISEÑO FORMAL DE BOLETA (ESTILO FACTURA)
+   ========================================= */
+
+/* Contenedor principal del Modal */
+.overlay-informe-leonidas {
+  background-color: rgba(0, 0, 0, 0.85); /* Fondo oscuro para resaltar la boleta */
+}
+
+/* El documento en sí (Blanco y Formal) */
+.contenedor-boleta-formal {
+  background-color: #fff;
+  color: #000; /* Texto negro sobre fondo blanco */
+  width: 200mm; /* Ancho A4 simulado */
+  max-width: 800px;
+  min-height: auto; /* Alto A4 simulado */
+  margin: 20px auto;
+  padding: 20px 40px;
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Tipografía limpia */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cabecera Formal */
+.header-boleta-formal {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.logo-leonidas-formal {
+  color: #00b359; /* Tu verde característico */
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -1px;
+}
+
+.info-empresa p {
+  margin: 2px 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+/* Recuadro de Tipo de Documento */
+.recuadro-tipo-doc {
+  border: 2px solid #000;
+  padding: 15px 30px;
+  text-align: center;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.recuadro-tipo-doc h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.recuadro-tipo-doc h3 {
+  margin: 2px 0;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #333;
+}
+
+.numero-doc {
+  margin: 10px 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #000;
+  font-family: 'Courier New', Courier, monospace; /* Estilo preimpreso */
+}
+
+.btn-cerrar-boleta {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+}
+.btn-cerrar-boleta:hover { color: #000; }
+
+/* Sección Datos Cliente */
+.seccion-datos-cliente {
+  margin-bottom: 30px;
+  padding: 15px;
+  background-color: #fefefe;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.dato-cliente-fila {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.icono-dato {
+  color: #888;
+  margin-right: 10px;
+}
+
+.dato-cliente-fila label {
+  font-weight: 600;
+  color: #333;
+  width: 150px;
+}
+
+.dato-cliente-fila span {
+  color: #000;
+  font-weight: 500;
+}
+
+/* Tabla de Ítems Estilo Factura */
+.tabla-items-boleta {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+  font-size: 0.9rem;
+}
+
+.tabla-items-boleta thead th {
+  background-color: #f2f2f2;
+  color: #000;
+  text-align: left;
+  padding: 12px 10px;
+  border: 1px solid #eaeaea;
+  font-weight: 700;
+}
+
+.tabla-items-boleta tbody td {
+  padding: 15px 10px;
+  border: 1px solid #eaeaea;
+  vertical-align: top;
+}
+
+.tabla-items-boleta tbody td strong {
+  font-size: 1rem;
+}
+
+.tabla-items-boleta tbody td small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.monto {
+  text-align: right;
+  width: 120px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.total-fila {
+  font-weight: 700;
+}
+
+/* Sección Totales */
+.contenedor-totales-boleta {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 40px;
+}
+
+.total-fila-resumen {
+  display: flex;
+  align-items: center;
+  width: 300px;
+  padding: 10px 0;
+}
+
+.total-fila-resumen.final {
+  border-top: 2px solid #000;
+  padding-top: 15px;
+}
+
+.total-fila-resumen label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #000;
+  flex: 1;
+  text-align: right;
+  margin-right: 15px;
+}
+
+.monto-final {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #00b359; /* Resaltado en verde */
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Pie de Boleta */
+.pie-boleta-formal {
+  text-align: 20px;
+  margin-top: auto; /* Empuja al fondo */
+  padding-top: 20px;
+  border-top: 1px solid #eaeaea;
+  color: #777;
+  font-size: 0.85rem;
+}
+.pie-boleta-formal p { margin: 3px 0; }
+
+/* Botones de Acción (Estilo para fondo oscuro del modal) */
+.grupo-botones-boleta-no-imprimir {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+/* Estilo para los botones en modo 'no venta' */
+.btn-formal-imprimir, .btn-formal-vender, .btn-formal-confirmar, .btn-formal-cancelar {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-formal-imprimir { background-color: #444; color: #fff; }
+.btn-formal-imprimir:hover { background-color: #555; }
+
+.btn-formal-vender { background-color: #00b359; color: #fff; }
+.btn-formal-vender:hover { background-color: #00cc66; }
+
+/* Contenedor modo venta */
+.contenedor-confirmar-venta-formal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.input-nombre-cliente-formal {
+  width: 400px;
+  max-width: 90%;
+  padding: 12px;
+  border: 1px solid #ffd700;
+  border-radius: 4px;
+  background-color: rgba(255, 215, 0, 0.1);
+  color: #fff; /* Texto blanco para el input sobre fondo oscuro */
+  font-size: 1rem;
+}
+.input-nombre-cliente-formal::placeholder { color: rgba(255,255,255,0.5); }
+
+.btn-formal-confirmar { background-color: #fff; color: #000; width: 400px; justify-content: center; }
+.btn-formal-confirmar:hover { background-color: #eaeaea; }
+
+.btn-formal-cancelar { background-color: transparent; color: #aaa; border: 1px solid #444; }
+.btn-formal-cancelar:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+
+
+/* Estilo para la X de cierre para que no flote mal */
+.btn-cerrar-boleta-esquina {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #f0f0f0;
+    border-radius: 50%;
+    padding: 5px;
+    cursor: pointer;
+    border: none;
+    z-index: 10;
+}
+
+/* CONFIGURACIÓN DEFINITIVA PARA IMPRESIÓN CENTRADA */
+@media print {
+  @page {
+    size: A4;
+    margin: 0; /* Elimina basura del navegador (URL, fecha) */
+  }
+  html, body {
+    height: 100%;
+    overflow: hidden; /* Evita que el navegador piense que hay más contenido abajo */
+  }
+
+  body {
+    background: white !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Ocultar todo */
+  body * {
+    visibility: hidden;
+  }
+
+  /* El overlay ahora servirá para centrar la boleta en la hoja */
+  .overlay-informe-leonidas {
+    visibility: visible !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white !important;
+    display: flex !important; /* Activamos flexbox */
+    justify-content: center !important; /* Centrado horizontal */
+    align-items: flex-start !important; /* Empieza desde arriba */
+  }
+
+  /* Ajuste de la Boleta */
+  .contenedor-boleta-formal {
+    visibility: visible !important;
+    display: block !important;
+    position: relative !important;
+    width: 190mm !important; /* Ancho estándar seguro para A4 */
+    margin: 10mm 0 0 0 !important; /* Margen superior de 1cm */
+    padding: 5mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    left: 0 !important;
+  }
+
+  .contenedor-boleta-formal * {
+    visibility: visible !important;
+  }
+
+  /* Eliminar definitivamente botones, inputs y la X */
+  .grupo-botones-boleta-no-imprimir, 
+  .btn-cerrar-boleta,
+  .btn-cerrar-boleta-esquina,
+  .contenedor-confirmar-venta-formal,
+  button, 
+  input {
+    display: none !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+.search-box-ventas {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #8b949e;
+  pointer-events: none;
+}
+
+.input-busqueda-ventas {
+  background: #1a1d23;
+  border: 1px solid #3f4451;
+  color: white;
+  padding: 8px 12px 8px 35px; /* Espacio extra a la izquierda para la lupa */
+  border-radius: 6px;
+  width: 250px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.input-busqueda-ventas:focus {
+  border-color: #00ff7f;
+}
