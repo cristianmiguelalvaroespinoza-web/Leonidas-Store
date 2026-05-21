@@ -98,28 +98,30 @@ export const enviarInformeGmailPDF = async (laptops, usuario) => {
     const stockLenovo = laptops.filter(l => l.marca?.toUpperCase().includes('LENOVO')).length;
     const stockAsus = laptops.filter(l => l.marca?.toUpperCase().includes('ASUS')).length;
 
+    // AQUÍ ESTÁ EL CAMBIO: AGREGAMOS 7 COLUMNAS Y EL CAMPO RESPONSABLE
     const tablaHtml = laptops.map(l => `
       <tr style="text-align: center;">
         <td style="border: 1px solid #000; padding: 5px;">${l.fecha || hoy.toLocaleDateString()}</td>
-        <td style="border: 1px solid #000; padding: 5px;">${l.serie || l.serial || '-'}</td>
-        <td style="border: 1px solid #000; padding: 5px; text-align: left;">${l.marca} - ${l.modelo}</td>
+        <td style="border: 1px solid #000; padding: 5px;">${l.responsable || l.vendedor || 'Admin'}</td>
+        <td style="border: 1px solid #000; padding: 5px;">${l.serial || '-'}</td>
+        <td style="border: 1px solid #000; padding: 5px;">${l.marca || ''} ${l.modelo || ''}</td>
         <td style="border: 1px solid #000; padding: 5px;">${l.cliente || '-'}</td>
         <td style="border: 1px solid #000; padding: 5px;">${l.destino || '-'}</td>
-        <td style="border: 1px solid #000; padding: 5px;">NUEVA</td>
+        <td style="border: 1px solid #000; padding: 5px;">${l.estado || 'NUEVA'}</td>
       </tr>
     `).join('');
 
     const templateParams = {
       subject_date: hoy.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' }).replace('.', ''),
+      remitente_nombre: usuario, // Cambiado para que coincida con tu plantilla
       total_ingresados: totalIngresados,
       registrados_hoy: registradosHoy, 
       enviados_hoy: enviadosHoy,
       stock_lenovo: stockLenovo,
       stock_asus: stockAsus,
       stock_total: totalIngresados - enviadosHoy,
-      num_pedidos: enviadosHoy, // Sincronizado con enviados hoy
-      tabla_html: tablaHtml,
-      from_name: usuario
+      num_pedidos: enviadosHoy,
+      tabla_html: tablaHtml
     };
 
     const response = await emailjs.send(

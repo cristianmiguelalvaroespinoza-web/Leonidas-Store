@@ -254,7 +254,7 @@ const [filtroFecha, setFiltroFecha] = useState("");
     visibility: 'visible'       // Forzamos visibilidad
   }}
             >
-                <option value="TODOS">👤 TODOS LOS VENDEDORES</option>
+                <option value="TODOS">👤 TODOS LOS USUARIOS</option>
                 <option value="LEONIDAS">LEONIDAS</option>
                 <option value="CRISTOFER">CRISTOFER</option>
                 <option value="DAVID">DAVID</option>
@@ -387,7 +387,7 @@ const [filtroFecha, setFiltroFecha] = useState("");
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>
               <th style={{ ...estiloCelda, width: '40px', color: '#94a3b8', textAlign: 'center', fontWeight: '600' }}>#</th>
               <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>FECHA</th>
-              {!esVendedor && <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>VENDEDOR</th>}
+              {!esVendedor && <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>USUARIO</th>}
               <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>LAPTOP</th>
               <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>CARACTERÍSTICAS</th>
               {esSuperAdmin && <th style={{ ...estiloCelda, color: '#ef4444', fontWeight: '600' }}>COSTO</th>}

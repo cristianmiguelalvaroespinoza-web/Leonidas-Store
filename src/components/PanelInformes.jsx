@@ -293,7 +293,8 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
   };
 
   const ejecutarReporte = (formato) => {
-    manejarGeneracionReporte(formato, { tipo: periodoInterno, fecha: fechaManual });
+    const config = { tipo: periodoInterno, fecha: fechaManual };
+    manejarGeneracionReporte(formato, config);
   };
 
   // --- LÓGICA DE FILTRADO ---

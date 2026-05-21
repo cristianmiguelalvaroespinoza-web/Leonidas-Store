@@ -16,9 +16,11 @@ const VentasView = ({
   manejarEliminar,
   manejarGeneracionReporte
 }) => {
+  const [cargando, setCargando] = useState(false); // Nuevo estado para controlar la carga
   const [busquedaVentas, setBusquedaVentas] = useState("");
   const [filtroFecha, setFiltroFecha] = useState(""); // Nuevo estado para calendario
-  const [equipoDetalle, setEquipoDetalle] = useState(null);
+  const [laptopsSeleccionadas, setLaptopsSeleccionadas] = useState([]);
+  const [equipoDetalle, setEquipoDetalle] = useState(null); // Inicializar equipoDetalle
   const [mostrarInforme, setMostrarInforme] = useState(false);
   const [modoVenta, setModoVenta] = useState(false); 
   const [nombreCliente, setNombreCliente] = useState("");
@@ -26,6 +28,7 @@ const VentasView = ({
 
   const manejarVentaProxima = (laptop) => {
     setEquipoDetalle(laptop);
+    setLaptopsSeleccionadas([]); // Limpiar selección masiva al iniciar venta individual
     setMostrarInforme(true);
     setModoVenta(false); 
     setNombreCliente("");
@@ -36,6 +39,20 @@ const VentasView = ({
     setBusquedaVentas("");
     setFiltroFecha("");
   };
+
+  // Para alternar la selección de un equipo
+const toggleSeleccion = (laptop) => {
+  if (laptopsSeleccionadas.find(l => l.fireId === laptop.fireId)) {
+    setLaptopsSeleccionadas(laptopsSeleccionadas.filter(l => l.fireId !== laptop.fireId));
+  } else {
+    setLaptopsSeleccionadas([...laptopsSeleccionadas, laptop]);
+  }
+};
+
+// Venta masiva
+const finalizarVentaLote = () => {
+  setMostrarInforme(true); // Solo abre el modal, la lógica de venta se maneja en finalizarVentaYActualizar
+};
 
   const descargarPDF = async () => {
     const elemento = document.querySelector(".contenedor-boleta-formal");
@@ -80,43 +97,61 @@ const VentasView = ({
     }
   };
 
-  const finalizarVentaYActualizar = async () => {
-    if (!nombreCliente.trim()) {
-      alert("Por favor, ingresa el nombre del cliente.");
-      return;
-    }
+ const finalizarVentaYActualizar = async () => {
+  if (!nombreCliente.trim()) {
+    alert("Por favor, ingresa el nombre del cliente.");
+    return;
+  }
 
-    const laptopId = equipoDetalle?.fireId || equipoDetalle?.id;
+  // Determinar si es una venta individual o masiva
+  const isIndividualSale = equipoDetalle !== null && laptopsSeleccionadas.length === 0;
+  const listaVenta = isIndividualSale ? [equipoDetalle] : laptopsSeleccionadas;
 
-    if (!laptopId) {
-      alert("Error: No se encontró el ID del equipo.");
-      return;
-    }
+  if (listaVenta.length === 0) {
+    alert("Error: No se seleccionó ningún equipo para la venta.");
+    return;
+  }
 
-    await descargarPDF();
+  // Generar el PDF para la venta (sea individual o masiva)
+  await descargarPDF();
 
-    try {
+  try {
+    setCargando(true); // Asumimos que tienes un estado de cargando
+
+    // 3. Actualizamos cada equipo en Firebase usando un bucle con Promise.all
+    await Promise.all(listaVenta.map(async (laptop) => {
+      const laptopId = laptop.fireId || laptop.id;
+      if (!laptopId) throw new Error("ID de equipo no encontrado.");
+
       const equipoRef = doc(db, "inventario", laptopId.trim());
-
-      await updateDoc(equipoRef, {
+      
+      return updateDoc(equipoRef, {
         estado: "Vendido",
         cliente: nombreCliente.toUpperCase(),
-        fecha: new Date().toLocaleDateString(),
-        destino: destinoVenta.toUpperCase()
+        fecha_venta: new Date().toLocaleDateString('es-PE'), // Usar formato es-PE
+        destino: destinoVenta.toUpperCase(),
+        vendedor_final: usuarioLogueado?.nombre || "Sistema", // Para tracking
+        responsable_venta: usuarioLogueado?.nombre || "Sin asignar" // Para tracking
       });
+    }));
 
-      alert("¡Venta registrada! El equipo ya no aparecerá en stock.");
-      
-      setMostrarInforme(false);
-      setEquipoDetalle(null);
-      setModoVenta(false);
-      setNombreCliente("");
+    alert(`¡Venta registrada! ${listaVenta.length} equipo(s) ya no aparecerán en stock.`);
+    
+    // 4. Limpieza de estados
+    setMostrarInforme(false);
+    setEquipoDetalle(null); // Limpiar selección individual
+    setLaptopsSeleccionadas([]); // Limpiamos la selección masiva
+    setModoVenta(false);
+    setNombreCliente("");
+    setDestinoVenta("LIMA");
 
-    } catch (error) {
-      console.error("Error al actualizar:", error);
-      alert("Fallo la conexión con la colección 'inventario'.");
-    }
-  };
+  } catch (error) {
+    console.error("Error al actualizar:", error);
+    alert("Falló la conexión con la base de datos: " + error.message);
+  } finally {
+    setCargando(false);
+  }
+};
   
   const ventasFiltradas = laptops.filter(lap => {
   const estaEnStock = (lap.estado || "STOCK").toUpperCase() === 'STOCK';
@@ -197,12 +232,38 @@ const VentasView = ({
         onVenderClick={manejarVentaProxima}
         activarEdicion={activarEdicion}
         manejarEliminar={manejarEliminar}
+        laptopsSeleccionadas={laptopsSeleccionadas}
+        toggleSeleccion={toggleSeleccion}
         modoVentas={true}
       />
 
-      {mostrarInforme && equipoDetalle && (
+      {laptopsSeleccionadas.length > 0 && (
+  <div className="bar-multiventa" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <span style={{ color: '#fff' }}>
+      Has seleccionado <b>{laptopsSeleccionadas.length}</b> equipos.
+    </span>
+    <div style={{ display: 'flex', gap: '10px' }}>
+      <button 
+        className="btn-vender-masivo" 
+        onClick={() => setMostrarInforme(true)} // Esto abre tu modal de venta actual
+        style={{ background: '#00ff7f', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+      >
+        💰 VENDER LOTE
+      </button>
+      <button 
+        className="btn-cancelar-lote"
+        onClick={() => setLaptopsSeleccionadas([])}
+        style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+      >
+        CANCELAR
+      </button>
+    </div>
+  </div>
+)}
+
+      {mostrarInforme && (equipoDetalle || laptopsSeleccionadas.length > 0) && (
         <div className="overlay-informe-leonidas">
-          <div className="contenedor-boleta-formal"> 
+          <div className="contenedor-boleta-formal" style={{ backgroundColor: '#1e293b', borderRadius: '0px', border: '1px solid #334155', boxShadow: 'none', color: 'white' }}>
             <button className="btn-cerrar-boleta-esquina" onClick={() => setMostrarInforme(false)}>
               <X size={24} />
             </button>
@@ -210,14 +271,16 @@ const VentasView = ({
             <header className="header-boleta-formal">
               <div className="info-empresa">
                 <h1 className="logo-leonidas-formal" style={{color: '#00c853'}}>FINPRO STORE</h1>
-                <p>Especialistas en Laptop & Equipos de Cómputo</p>
-                <p>Lima - Perú</p>
+                <p style={{color: '#94a3b8'}}>Especialistas en Laptop & Equipos de Cómputo</p>
+                <p style={{color: '#94a3b8'}}>Lima - Perú</p>
               </div>
-              <div className="recuadro-tipo-doc">
-                <h2>BOLETA DE VENTA</h2>
-                <h3>ELECTRÓNICA</h3>
-                <p className="numero-doc">
-                    B001-{equipoDetalle.id ? equipoDetalle.id.substring(0,6).toUpperCase() : "STOCK"}
+              <div className="recuadro-tipo-doc" style={{ border: '1px solid #334155', backgroundColor: '#0f172a', borderRadius: '0px', color: 'white' }}>
+                <h2 style={{color: 'white'}}>BOLETA DE VENTA</h2>
+                <h3 style={{color: 'white'}}>ELECTRÓNICA</h3>
+                <p className="numero-doc" style={{color: 'white'}}>
+                    {equipoDetalle?.id ? `B001-${equipoDetalle.id.substring(0,6).toUpperCase()}` : 
+                     laptopsSeleccionadas.length > 0 ? `B001-LOTE-${laptopsSeleccionadas.length}` : 
+                     "B001-N/A"}
                 </p>
               </div>
             </header>
@@ -227,51 +290,61 @@ const VentasView = ({
                 <div className="dato-cliente-fila">
                   <User size={16} className="icono-dato" />
                   <label>CLIENTE:</label>
-                  <span>{nombreCliente.toUpperCase() || "________________________"}</span>
+                  <span style={{color: 'white'}}>{nombreCliente.toUpperCase() || "________________________"}</span>
                 </div>
                 <div className="dato-cliente-fila">
                   <CalendarDays size={16} className="icono-dato" />
                   <label>FECHA:</label>
-                  <span>{new Date().toLocaleDateString()}</span>
+                  <span style={{color: 'white'}}>{new Date().toLocaleDateString()}</span>
                 </div>
                 <div className="dato-cliente-fila">
                   <MapPin size={16} className="icono-dato" />
                   <label>DESTINO:</label>
-                  <span>{destinoVenta.toUpperCase()}</span>
+                  <span style={{color: 'white'}}>{destinoVenta.toUpperCase()}</span>
                 </div>
               </div>
 
-              <table className="tabla-items-boleta">
-                <thead>
-                  <tr>
-                    <th>CANT.</th>
-                    <th>DESCRIPCIÓN</th>
-                    <th>P. UNITARIO</th>
-                    <th>TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>1</td>
-                    <td>
-                      <strong>LAPTOP {equipoDetalle.marca?.toUpperCase()} {equipoDetalle.modelo?.toUpperCase()}</strong><br />
-                      <small>S/N: {equipoDetalle.serial || "N/A"} | {equipoDetalle.procesador}</small>
-                    </td>
-                    <td className="monto">S/ {Number(equipoDetalle.precio).toFixed(2)}</td>
-                    <td className="monto total-fila">S/ {Number(equipoDetalle.precio).toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
+             <table className="tabla-items-boleta">
+  <thead>
+    <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #334155' }}>
+      <th style={{ color: 'white' }}>CANT.</th>
+      <th style={{ textAlign: 'left', color: 'white' }}>DESCRIPCIÓN</th>
+      <th style={{ textAlign: 'right', color: 'white' }}>TOTAL</th>
+    </tr>
+  </thead>
+  <tbody>
+    {/* Usamos el array de seleccionadas si existe, si no, convertimos el equipo individual a array */}
+    {(laptopsSeleccionadas.length > 0 ? laptopsSeleccionadas : [equipoDetalle].filter(Boolean)).map((item, index) => (
+      <tr key={item.fireId || index} style={{ borderBottom: '1px solid #334155' }}>
+        <td style={{ color: 'white', padding: '6px 10px' }}>1</td>
+        <td style={{ color: 'white', padding: '6px 10px' }}>
+          <strong>LAPTOP {item.marca?.toUpperCase()} {item.modelo?.toUpperCase()}</strong><br />
+          <small style={{ color: '#94a3b8' }}>S/N: {item.serial || "N/A"} | {item.procesador}</small>
+        </td>
+        <td className="monto total-fila" style={{ padding: '6px 10px' }}>S/ {Number(item.precio || 0).toFixed(2)}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
-              <div className="contenedor-totales-boleta">
-                <div className="total-fila-resumen final">
-                  <label>TOTAL A PAGAR:</label>
-                  <span className="monto-final">S/ {Number(equipoDetalle.precio).toFixed(2)}</span>
-                </div>
-              </div>
+{/* TOTAL A PAGAR (Único) */}
+{(() => {
+  const totalAPagar = laptopsSeleccionadas.length > 0 
+    ? laptopsSeleccionadas.reduce((sum, l) => sum + (Number(l.precio) || 0), 0)
+    : (Number(equipoDetalle?.precio) || 0);
+    
+  return (
+    <div className="contenedor-totales-boleta">
+      <div className="total-fila-resumen final">
+        <label style={{ color: '#94a3b8' }}>TOTAL A PAGAR:</label>
+        <span className="monto-final">S/ {totalAPagar.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+})()}
 
-              <footer className="pie-boleta-formal">
-                <p>Gracias por su compra en FINPRO STORE.</p>
+              <footer className="pie-boleta-formal" style={{ color: '#94a3b8' }}>
+                <p style={{ color: '#94a3b8' }}>Gracias por su compra en FINPRO STORE.</p>
               </footer>
             </div>
 
@@ -279,10 +352,10 @@ const VentasView = ({
                 {!modoVenta ? (
                   <>
                     <button className="btn-formal-imprimir" onClick={() => window.print()}>
-                      <Printer size={18} /> IMPRIMIR
+                      <Printer size={18} /> IMPRIMIR BOLETA
                     </button>
                     <button className="btn-formal-vender" onClick={() => setModoVenta(true)}>
-                      <FileText size={18} /> INICIAR VENTA
+                      <FileText size={18} /> INICIAR PROCESO DE VENTA
                     </button>
                   </>
                 ) : (
@@ -302,7 +375,7 @@ const VentasView = ({
                         onChange={(e) => setDestinoVenta(e.target.value)}
                       />
                     <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
-                      <button className="btn-formal-confirmar" onClick={finalizarVentaYActualizar}>
+                      <button className="btn-formal-confirmar" onClick={finalizarVentaYActualizar} disabled={cargando}>
                         <CheckCircle size={18} /> CONFIRMAR Y PDF
                       </button>
                       <button className="btn-formal-cancelar" onClick={() => setModoVenta(false)}>

@@ -101,7 +101,7 @@ const manejarEnvioFormal = async (datosFiltrados = null) => {
     setMostrarModalInformes(false); 
   } catch (error) {
     console.error("Error al enviar el PDF:", error);
-    alert("❌ Hubo un error al generar o enviar el PDF.");
+    alert("❌ Hubo un error al generar.");
   } finally {
     setCargando(false); 
   }
@@ -300,7 +300,6 @@ const manejarGeneracionReporte = (formato, config = {}) => {
       return fechaVentaDB === fechaCalendarioLimpia;
     });
   }
-
   // 3. Validar si hay algo que enviar
   if (registradosHoy.length === 0 && vendidosHoy.length === 0) {
     return alert(`No hay registros ni ventas para el periodo seleccionado.`);
@@ -1054,25 +1053,23 @@ if (!autenticado) {
       <header className="blue-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', minHeight: '80px' }}>
   
   {/* BLOQUE IZQUIERDA: Identidad (Ancho fijo para equilibrar el centro) */}
-  <div className="brand-section" style={{ width: '300px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+  <div className="brand-section" style={{ display: 'flex', alignItems: 'center', gap: '15px', marginRight: '30px' /* Espacio de seguridad */ }}>
+    {/* Avatar (Logo) */}
     {(() => {
       const nombreUsuario = usuarioLogueado?.nombre?.toUpperCase();
       const avatarSrc = AVATARES_USUARIOS[nombreUsuario] || AVATARES_USUARIOS['DEFAULT'];
       const esImagenUrl = avatarSrc.startsWith('http') || avatarSrc.startsWith('/');
-
-      return esImagenUrl 
-        ? <img src={avatarSrc} alt="logo" className="nav-logo" />
-        : <div className="nav-logo-emoji">{avatarSrc}</div>;
+      return esImagenUrl ? <img src={avatarSrc} alt="logo" className="nav-logo" /> : <div className="nav-logo-emoji">{avatarSrc}</div>;
     })()}
-    
-    <div className="brand-info">
-      <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold' }}>FINPRO STORE</h1>
-      <div className="user-status-badges" style={{ display: 'flex', gap: '5px', marginTop: '3px' }}>
+    {/* Contenedor vertical para el texto */}
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
+      <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold', whiteSpace: 'nowrap' }}>FINPRO STORE</h1>
+      <div className="user-info-display" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span className="welcome-badge" style={{ fontSize: '0.75rem' }}>
           ✅ {usuarioLogueado?.nombre.toUpperCase()}
         </span>
-        <span className="role-badge" style={{ fontSize: '0.75rem' }}>
-          🛡️ {usuarioLogueado?.rol.replace('_', ' ').toUpperCase()}
+        <span className="role-badge" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+          🛡️ {usuarioLogueado?.rol === 'administrador_ventas' ? 'ADMINISTRADOR' : usuarioLogueado?.rol.replace('_', ' ').toUpperCase()}
         </span>
       </div>
     </div>
@@ -1080,7 +1077,6 @@ if (!autenticado) {
 
   {/* BLOQUE CENTRAL: Navegación Reordenada, Centrada y con LED */}
   <nav className="nav-actions" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flexGrow: 1 }}>
-    
     {/* 1. EXCEL LOCAL */}
     <button 
       className={pestanaActual === 'excel_interno' ? 'nav-btn active' : 'nav-btn'} 
@@ -1133,7 +1129,7 @@ if (!autenticado) {
   </nav>
 
   {/* BLOQUE DERECHA: Salida (Ancho fijo para equilibrar) */}
-  <div className="exit-section" style={{ width: '300px', display: 'flex', justifyContent: 'flex-end' }}>
+  <div className="exit-section" style={{ display: 'flex', justifyContent: 'flex-end' }}>
     <button 
       className="btn-exit" 
       onClick={() => { 

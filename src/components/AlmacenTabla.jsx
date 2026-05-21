@@ -10,7 +10,9 @@ const AlmacenTabla = ({
   eliminarProducto, 
   busqueda = "",
   onVenderClick, 
-  modoVentas = false 
+  modoVentas = false,
+  laptopsSeleccionadas = [],
+  toggleSeleccion
 }) => {
   // --- NUEVO ESTADO PARA FILTRAR POR VENDEDOR ---
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
@@ -174,8 +176,9 @@ const AlmacenTabla = ({
     fontSize: '13px',         // Subimos un punto para que se vea mejor
     cursor: 'pointer',
     outline: 'none',         // Subimos de 36px a 40px para que no corte la letra
-    lineHeight: '40px',       // Centra el texto verticalmente
-    width: '260px',           // Un poco más de ancho para los nombres largos
+    height: '45px',           // Altura reducida para que sea más delgado
+    lineHeight: '20px',       // Centra el texto verticalmente en la nueva altura
+    width: '200px',          // Ancho original restaurado
     appearance: 'none',
     backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
     backgroundRepeat: 'no-repeat',
@@ -185,7 +188,7 @@ const AlmacenTabla = ({
     verticalAlign: 'middle'   // Alineación extra
   }}
 >
-  <option value="TODOS">👤 TODOS LOS VENDEDORES</option>
+  <option value="TODOS">👤 TODOS LOS USUARIOS</option>
   <option value="LEONIDAS">LEONIDAS</option>
   <option value="CRISTOFER">CRISTOFER</option>
   <option value="DAVID">DAVID</option>
@@ -264,9 +267,11 @@ const AlmacenTabla = ({
         <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0f172a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>
+              {/* Espaciador para la columna de checkboxes en modo ventas */}
+              {modoVentas && <th style={{ ...estiloCelda, width: '30px' }}></th>}
               <th style={{ ...estiloCelda, fontSize: '11px', width: '40px', color: '#94a3b8', textAlign: 'center', fontWeight: '600' }}>#</th>
               <th style={{ ...estiloCelda, fontSize: '11px', textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>FECHA</th>
-              <th style={{ ...estiloCelda, fontSize: '11px', textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>VENDEDOR</th>
+              <th style={{ ...estiloCelda, fontSize: '11px', textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>USUARIO</th>
               <th style={{ ...estiloCelda, fontSize: '11px', textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>LAPTOP</th>
               <th style={{ ...estiloCelda, fontSize: '11px', textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>PROCESADOR / GEN</th>
               <th style={{ ...estiloCelda, fontSize: '11px', textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>RAM</th>
@@ -287,6 +292,24 @@ const AlmacenTabla = ({
           <tbody>
             {laptopsOrdenadas.map((l, i) => (
               <tr key={l.fireId || i} className="row-hover-simple" style={{ backgroundColor: 'transparent' }}>
+                {modoVentas && (
+                  <td style={estiloCelda}>
+                    <input
+                      type="checkbox"
+                      checked={laptopsSeleccionadas.some(sel => sel.fireId === l.fireId)}
+                      onChange={() => toggleSeleccion && toggleSeleccion(l)}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '0px',
+                        accentColor: '#00ff7f',
+                        cursor: 'pointer',
+                        appearance: 'auto',
+                        WebkitAppearance: 'auto',
+                      }}
+                    />
+                  </td>
+                )}
                 <td style={{ ...estiloCelda, color: '#94a3b8', textAlign: 'center' }}>{i + 1}</td>
                 <td style={{ ...estiloCelda, color: '#e2e8f0' }}>{l.fecha}</td>
                 <td style={{ ...estiloCelda, color: '#60a5fa' }}>{l.responsable || l.vendedor}</td>
