@@ -427,30 +427,32 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
           <div className={styles.seccionOscura}>
               {/* ... controles de periodo se mantienen igual ... */}
               <h3>⚙️ CONFIGURACIÓN DEL REPORTE</h3>
-              <div className={styles.controlesPeriodo}>
-                <button onClick={() => setPeriodoInterno('dia')} className={`${styles.btnPeriodo} ${periodoInterno === 'dia' ? styles.btnPeriodoActive : ''}`}>HOY</button>
-   <input 
-  type="date" 
-  value={fechaManual} 
-  className={styles.inputDate} 
-  onChange={(e) => { 
-    setFechaManual(e.target.value); 
-    setPeriodoInterno('calendario'); 
-  }} 
-  style={{ 
-    height: '42px', 
-    flex: 1, /* Permite que tome el espacio sobrante... */
-    maxWidth: '200px', /* ...pero sin pasarse de este límite */
-    padding: '0 15px',
-    borderRadius: '8px',
-    border: periodoInterno === 'calendario' ? '2px solid #3b82f6' : '1px solid transparent',
-    outline: 'none',
-    cursor: 'pointer',
-    margin: '0 5px'
-  }}
-/>
-                <button onClick={() => setPeriodoInterno('mes')} className={`${styles.btnPeriodo} ${periodoInterno === 'mes' ? styles.btnPeriodoActive : ''}`}>MES ACTUAL</button>
-              </div>
+              <div className={styles.controlesPeriodo} style={{ display: 'flex', alignItems: 'stretch' }}>
+  <button onClick={() => setPeriodoInterno('dia')} className={`${styles.btnPeriodo} ${periodoInterno === 'dia' ? styles.btnPeriodoActive : ''}`}>HOY</button>
+  
+  <input 
+    type="date" 
+    value={fechaManual} 
+    className={styles.inputDate} 
+    onChange={(e) => { 
+      setFechaManual(e.target.value); 
+      setPeriodoInterno('calendario'); 
+    }} 
+    style={{ 
+      flex: 1, 
+      maxWidth: '200px', 
+      padding: '0 15px',
+      borderRadius: '8px',
+      border: periodoInterno === 'calendario' ? '2px solid #3b82f6' : '1px solid transparent',
+      outline: 'none',
+      cursor: 'pointer',
+      margin: '0 5px',
+      boxSizing: 'border-box'
+    }}
+  />
+  
+  <button onClick={() => setPeriodoInterno('mes')} className={`${styles.btnPeriodo} ${periodoInterno === 'mes' ? styles.btnPeriodoActive : ''}`}>MES ACTUAL</button>
+</div>
               <div className={styles.gridAcciones}>
                 <button onClick={() => ejecutarReporte('pdf')} disabled={cargando} className={`${styles.btnAccion} ${styles.btnPdf}`}><FileText size={20} /> {cargando ? 'GENERANDO...' : 'ENVIAR GMAIL TABLA'}</button>
                 
