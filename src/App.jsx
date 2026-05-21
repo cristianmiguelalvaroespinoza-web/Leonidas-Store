@@ -1178,19 +1178,67 @@ if (!autenticado) {
       </div>
     )}
     {/* ============================================================= */}
-
-    <div className="search-container-modern">
+ 
+   <div className="search-container-modern" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
       {/* --- BUSCADOR RESTAURADO --- */}
-      <div className="search-box-wrapper">
-        <span className="search-icon">🔍</span>
-        <input
-          type="text"
-          placeholder="Buscar por Serie en Almacén..."
-          className="search-input-modern"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
+{/* --- BUSCADOR CON FUERZA Y PROFUNDIDAD --- */}
+<div style={{
+  display: 'flex',
+  alignItems: 'center',
+  backgroundColor: '#020617', /* EL CAMBIO PRINCIPAL: Un tono casi negro muy profundo */
+  border: '1px solid #334155', /* Borde para delimitarlo claramente */
+  borderRadius: '8px',
+  minHeight: '42px',
+  padding: '0 15px',
+  flex: 1,
+  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' /* MAGIA VISUAL: Sombra interna que le da fuerza y relieve */
+}}>
+
+  <style>{`
+    #input-borrado-total {
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      border-radius: 0 !important;
+      color: #ffffff !important; /* Blanco puro para cuando escribas */
+      -webkit-appearance: none !important;
+    }
+    #input-borrado-total::placeholder {
+      color: #cbd5e1 !important; /* Gris mucho más claro y vibrante para que resalte */
+      opacity: 1 !important;
+    }
+  `}</style>
+
+  {/* LUPA */}
+  {busqueda === "" && (
+    <span style={{
+      marginRight: '12px',
+      color: '#e2e8f0', /* Lupa más brillante para acompañar la fuerza del fondo */
+      display: 'flex',
+      alignItems: 'center'
+    }}>
+      🔍
+    </span>
+  )}
+
+  {/* INPUT */}
+  <input
+    id="input-borrado-total"
+    type="text"
+    placeholder="Buscar por Serie en Almacén..."
+    value={busqueda}
+    onChange={(e) => setBusqueda(e.target.value)}
+    style={{
+      flex: 1,
+      width: '100%',
+      padding: 0,
+      margin: 0,
+      fontWeight: '500'
+    }}
+  />
+</div>
 
       {/* --- CONTROLES DE FECHA Y BOTÓN (Con su espacio) --- */}
       <div className="filter-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

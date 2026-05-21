@@ -264,6 +264,16 @@ const [filtroFecha, setFiltroFecha] = useState("");
         </div>
 
         <div className={styles.reportesControls}>
+<<<<<<< HEAD
+          <input
+  type="text"
+  placeholder="Buscar por marca, modelo o serial..."
+  className={styles.inputBusqueda} // <-- TU CLASE SE MANTIENE
+  value={busqueda}
+  onChange={(e) => setBusqueda(e.target.value)}
+  style={{ flex: 1, height: '40px', borderRadius: '6px', padding: '0 15px' }}
+/>
+=======
           <input 
             type="text" 
             placeholder="Buscar por marca, modelo o serial..." 
@@ -271,6 +281,7 @@ const [filtroFecha, setFiltroFecha] = useState("");
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)} 
           />
+>>>>>>> 7eaab575d234ff505da7cf7356a35c22a7342f71
           
           <button 
             onClick={limpiarFiltros}
