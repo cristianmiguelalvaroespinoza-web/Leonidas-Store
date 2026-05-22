@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'; 
 import { suscribirseAInventario, eliminarProducto, actualizarProducto } from '../services/api'; 
+<<<<<<< HEAD
 import * as XLSX from 'xlsx-js-style';
 
 // IMPORTACIÓN DEL CSS MODULE
@@ -10,6 +11,12 @@ const obtenerMesYAnio = (fechaString) => {
   const [dia, mes, anio] = fechaString.split('/');
   return `${meses[parseInt(mes) - 1]} ${anio}`;
 };
+=======
+import * as XLSX from 'xlsx';
+
+// IMPORTACIÓN DEL CSS MODULE
+import styles from './HojaReportes.module.css';
+>>>>>>> a344bf8000a18a8d0969e2771381413d30399cba
 
 const HojaReportes = ({ usuarioLogueado, activarEdicion, setModalImagen, fechaFiltro, setFechaFiltro }) => {
   const [datos, setDatos] = useState([]);
@@ -20,6 +27,7 @@ const HojaReportes = ({ usuarioLogueado, activarEdicion, setModalImagen, fechaFi
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
   const [filtroTiempo, setFiltroTiempo] = useState("TODAS"); // <-- AÑADE ESTA LÍNEA
 const [filtroFecha, setFiltroFecha] = useState("");
+<<<<<<< HEAD
 const [diasExpandidos, setDiasExpandidos] = useState({});
 
   const toggleDia = (dia) => {
@@ -28,6 +36,9 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
       [dia]: prev[dia] !== false ? false : true 
     }));
   };
+=======
+
+>>>>>>> a344bf8000a18a8d0969e2771381413d30399cba
   const esVendedor = usuarioLogueado?.rol === 'vendedor';
   const esSuperAdmin = usuarioLogueado?.rol === 'super_admin'; 
   const esAdmin2 = usuarioLogueado?.rol === 'admin_2'; 
@@ -455,6 +466,7 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
               <th style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>ACCIONES</th>
             </tr>
           </thead>
+<<<<<<< HEAD
         <tbody>
   {(() => {
     let ultimoMesVisto = null;
@@ -511,6 +523,20 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
 
           {estaExpandido && (
             <tr style={{ backgroundColor: 'transparent' }}>
+=======
+          <tbody>
+            {datosOrdenados.map((item, index) => {
+              const puedeCambiarEstado = tienePermisoEstado(item);
+              const puedeEditarOEliminar = tienePermisoCritico(item);
+              const estadoStr = (item.estado || "STOCK").toUpperCase();
+              const colorEstado = estadoStr === 'VENDIDO' ? '#ef4444' : 
+                                 estadoStr === 'SEPARADO' ? '#f59e0b' : '#10b981';
+              const tienePrecio = item.precio && Number(item.precio) > 0;
+              const tieneFotos = item.imagenes && item.imagenes.length > 0;
+
+              return (
+                <tr key={item.fireId || index} style={{ backgroundColor: 'transparent' }}>
+>>>>>>> a344bf8000a18a8d0969e2771381413d30399cba
                   <td style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8' }}>{index + 1}</td>
                   <td style={estiloCelda}>{item.fecha}</td>
                   {!esVendedor && <td style={{ ...estiloCelda, color: '#60a5fa' }}>{item.responsable || item.vendedor}</td>}
@@ -553,11 +579,16 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
                     </div>
                   </td>
                 </tr>
+<<<<<<< HEAD
               )} {/* <-- CIERRE DEL DESPLEGABLE */}
         </React.Fragment>
       );
     });
   })()}
+=======
+              );
+            })}
+>>>>>>> a344bf8000a18a8d0969e2771381413d30399cba
           </tbody>
         </table>
       </div>

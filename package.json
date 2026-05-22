@@ -21,8 +21,12 @@
     "nodemailer": "^8.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+<<<<<<< HEAD
     "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0"
+=======
+    "xlsx": "^0.18.5"
+>>>>>>> a344bf8000a18a8d0969e2771381413d30399cba
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
