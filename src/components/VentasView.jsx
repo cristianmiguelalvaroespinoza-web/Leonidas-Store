@@ -192,7 +192,7 @@ const finalizarVentaLote = () => {
       <div className="section-header">
         <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS - FINPRO STORE</h2>
         
-        <div className="header-controls-ventas">
+        <div className="header-controls-ventas mobile-stack">
           {/* Botón Ver Todo */}
           <button className="btn-ver-todo-ventas" onClick={limpiarFiltros}>
             <RotateCcw size={16} /> Ver Todo
@@ -225,20 +225,22 @@ const finalizarVentaLote = () => {
         </div>
       </div>
 
-      <AlmacenTabla 
-        laptops={ventasFiltradas} 
-        usuarioLogueado={usuarioLogueado}
-        setModalImagen={setModalImagen}
-        onVenderClick={manejarVentaProxima}
-        activarEdicion={activarEdicion}
-        manejarEliminar={manejarEliminar}
-        laptopsSeleccionadas={laptopsSeleccionadas}
-        toggleSeleccion={toggleSeleccion}
-        modoVentas={true}
-      />
+      <div className="table-wrapper-global">
+        <AlmacenTabla 
+          laptops={ventasFiltradas} 
+          usuarioLogueado={usuarioLogueado}
+          setModalImagen={setModalImagen}
+          onVenderClick={manejarVentaProxima}
+          activarEdicion={activarEdicion}
+          manejarEliminar={manejarEliminar}
+          laptopsSeleccionadas={laptopsSeleccionadas}
+          toggleSeleccion={toggleSeleccion}
+          modoVentas={true}
+        />
+      </div>
 
       {laptopsSeleccionadas.length > 0 && (
-  <div className="bar-multiventa" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div className="bar-multiventa mobile-stack" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
     <span style={{ color: '#fff' }}>
       Has seleccionado <b>{laptopsSeleccionadas.length}</b> equipos.
     </span>

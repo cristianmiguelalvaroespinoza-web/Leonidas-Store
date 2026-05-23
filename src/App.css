@@ -1336,9 +1336,8 @@ input[type="date"]:hover {
     top: 0 !important;
   }
 
-  /* Ajustar la malla de las laptops en inventario */
   .inventarioGrid {
-    grid-template-columns: 1fr !important; /* Si usas tarjetas, que sea una por fila */
+    grid-template-columns: 1fr !important;
   }
 }
 /* Esto fuerza al texto que el usuario escribe */
@@ -1374,4 +1373,75 @@ input[type="date"]:hover {
 
 .pin-input-clean:focus {
   border-color: #00ff7f;
+}
+
+/* ============================================================
+   11.5 PISTA DE DESLIZAMIENTO PARA TABLAS
+   ============================================================ */
+.table-responsive-wrapper {
+  width: 100% !important;
+  max-width: 100vw !important; /* <-- EL MURO DE CONTENCIÓN */
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  padding-bottom: 10px; /* Evita que el scroll tape letras */
+}
+
+.table-responsive-wrapper table {
+  min-width: 1000px !important; /* Fuerza a la tabla a no encogerse */
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* Protegemos los contenedores padres para que no se estiren */
+@media (max-width: 768px) {
+  .main-content, .inventory-view, .app-viewport {
+    max-width: 100vw !important;
+    overflow-x: hidden !important; 
+    box-sizing: border-box !important;
+  }
+
+  .app-viewport {
+    height: 100dvh !important; /* Altura dinámica para evitar saltos */
+    overflow-y: auto !important; /* Este es el único contenedor con scroll */
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+    transform: none !important; /* Evita que se rompa el position: fixed */
+    
+    /* Espacio para las barras fijas superior e inferior */
+    padding-top: 60px;
+    padding-bottom: 110px !important;
+    box-sizing: border-box; /* Asegura que el padding no desborde */
+    overflow-x: hidden;
+  }
+
+  /*
+    OPTIMIZACIÓN DE ESPACIO PARA MÓVILES
+    Reducimos los paddings para que las tablas y el contenido ocupen más pantalla.
+  */
+  main {
+    padding: 15px;
+  }
+  .inventory-view, 
+  .excel-local-container,
+  /* Los siguientes selectores son para asegurar que todas las vistas de tabla
+     tengan menos padding. Si no funcionan, puedes mover la regla
+     'padding: 15px !important;' a sus archivos CSS específicos. */
+  .ventas-view-container,
+  .reportesContainer {
+    padding: 15px !important;
+  }
+
+  /* Clase de utilidad para apilar controles en móvil */
+  .mobile-stack {
+    /* En lugar de forzar una columna, permitimos que los elementos se envuelvan.
+       Esto es ideal para filtros y botones, haciéndolos más compactos. */
+    flex-wrap: wrap !important;
+    gap: 10px !important; /* Espacio reducido para un look más compacto */
+  }
+
+  .mobile-stack > * {
+    flex-grow: 1; /* Hacemos que los elementos (como el buscador) puedan crecer */
+    min-width: 160px; /* Evita que los botones se hagan demasiado pequeños */
+  }
 }

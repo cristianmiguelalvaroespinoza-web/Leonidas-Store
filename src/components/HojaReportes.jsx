@@ -320,7 +320,7 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
             </select>
         </div>
 
-        <div className={styles.reportesControls}>
+        <div className={`${styles.reportesControls} mobile-stack`}>
           <input
   type="text"
   placeholder="Buscar por marca, modelo o serial..."
@@ -439,7 +439,7 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
         )}
       </div>
       </div>
-      <div className={styles.tableWrapper} style={{ overflowX: 'auto', borderRadius: '8px' }}>
+      <div className="table-responsive-wrapper">
         <table className={styles.leonidasTable} style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0f172a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>

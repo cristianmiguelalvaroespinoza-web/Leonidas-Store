@@ -427,7 +427,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
           <div className={styles.seccionOscura}>
               {/* ... controles de periodo se mantienen igual ... */}
               <h3>⚙️ CONFIGURACIÓN DEL REPORTE</h3>
-              <div className={styles.controlesPeriodo} style={{ display: 'flex', alignItems: 'stretch' }}>
+              <div className={`${styles.controlesPeriodo} mobile-stack`} style={{ display: 'flex', alignItems: 'stretch' }}>
   <button onClick={() => setPeriodoInterno('dia')} className={`${styles.btnPeriodo} ${periodoInterno === 'dia' ? styles.btnPeriodoActive : ''}`}>HOY</button>
   
   <input 
@@ -453,7 +453,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
   
   <button onClick={() => setPeriodoInterno('mes')} className={`${styles.btnPeriodo} ${periodoInterno === 'mes' ? styles.btnPeriodoActive : ''}`}>MES ACTUAL</button>
 </div>
-              <div className={styles.gridAcciones}>
+              <div className={`${styles.gridAcciones} mobile-stack`}>
                 <button onClick={() => ejecutarReporte('pdf')} disabled={cargando} className={`${styles.btnAccion} ${styles.btnPdf}`}><FileText size={20} /> {cargando ? 'GENERANDO...' : 'ENVIAR GMAIL TABLA'}</button>
                 
                 <div style={{ display: 'flex', gap: '10px', gridColumn: 'span 1' }}>
@@ -514,7 +514,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-responsive-wrapper">
             <table className={styles.tablaLeonidas}>
               <thead>
                 <tr>

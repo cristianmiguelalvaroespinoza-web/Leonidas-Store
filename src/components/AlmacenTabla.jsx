@@ -152,7 +152,7 @@ const obtenerMesYAnio = (fechaString) => {
 };
 
   return (
-    <div className="excel-container fade-in">
+    <>
       <div className="excel-header-actions" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -275,7 +275,7 @@ const obtenerMesYAnio = (fechaString) => {
         </button>
       </div>
 
-      <div className="excel-table-wrapper" style={{ overflowX: 'auto', borderRadius: '8px' }}>
+      <div className="table-responsive-wrapper">
         <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0f172a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>
@@ -433,7 +433,7 @@ const obtenerMesYAnio = (fechaString) => {
 </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 };
 

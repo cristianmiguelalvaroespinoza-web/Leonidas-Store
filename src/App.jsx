@@ -1,5 +1,5 @@
 
-import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Menu, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import AlmacenTabla from './components/AlmacenTabla';
@@ -7,6 +7,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import VentasView from './components/VentasView';
 import PanelInformes from './components/PanelInformes';
 // Importación de constantes y servicios
+import MenuMobile from './MenuMobile';
 import { enviarInformeGmailPDF } from './serviciosReportes';
 import HojaReportes from './components/HojaReportes';
 import RegistroVentasView from './components/RegistroVentasView';
@@ -45,7 +46,9 @@ function App() {
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [mostrarModalInformes, setMostrarModalInformes] = useState(false);
   const [indiceEscaneo, setIndiceEscaneo] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 const [mostrarPin, setMostrarPin] = useState(false);
+const [esCelular, setEsCelular] = useState(window.innerWidth <= 768);
 const [pinDigitado, setPinDigitado] = useState("");
 const [usuarioPendiente, setUsuarioPendiente] = useState(null);
   const [autenticado, setAutenticado] = useState(false);
@@ -83,6 +86,18 @@ const [verPassword, setVerPassword] = useState(false);
     setModalImagen(null);
     setFotoActual(""); 
   };
+
+  const handleLogout = () => {
+    setIsMenuOpen(false); // Cierra el menú si está abierto
+    setAutenticado(false); 
+    setUsuarioLogueado(null);
+    setUserDigitado("");
+    setPassDigitado("");
+    setPinDigitado("");
+    localStorage.clear();
+    sessionStorage.clear();
+  };
+
 
 // ... dentro de tu componente principal App ...
 
@@ -186,6 +201,15 @@ const manejarEnvioFormal = async (datosFiltrados = null) => {
     }
 
   }, [usuarioLogueado, pestanaActual]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setEsCelular(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // --- EFECTO 2: Suscripción a Firebase (solo para roles que usan la UI principal) ---
   useEffect(() => {
@@ -1054,281 +1078,237 @@ if (!autenticado) {
   </div>
 )}
 
-      {/* HEADER CORREGIDO */}
-     {/* HEADER CORREGIDO Y DISPERSO */}
-      <header className="blue-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', minHeight: '80px' }}>
-  
-  {/* BLOQUE IZQUIERDA: Identidad (Ancho fijo para equilibrar el centro) */}
-  <div className="brand-section" style={{ display: 'flex', alignItems: 'center', gap: '15px', marginRight: '30px' /* Espacio de seguridad */ }}>
-    {/* Avatar (Logo) */}
-    {(() => {
-      const nombreUsuario = usuarioLogueado?.nombre?.toUpperCase();
-      const avatarSrc = AVATARES_USUARIOS[nombreUsuario] || AVATARES_USUARIOS['DEFAULT'];
-      const esImagenUrl = avatarSrc.startsWith('http') || avatarSrc.startsWith('/');
-      return esImagenUrl ? <img src={avatarSrc} alt="logo" className="nav-logo" /> : <div className="nav-logo-emoji">{avatarSrc}</div>;
-    })()}
-    {/* Contenedor vertical para el texto */}
-    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
-      <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold', whiteSpace: 'nowrap' }}>FINPRO STORE</h1>
-      <div className="user-info-display" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span className="welcome-badge" style={{ fontSize: '0.75rem' }}>
-          ✅ {usuarioLogueado?.nombre.toUpperCase()}
-        </span>
-        <span className="role-badge" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-          🛡️ {usuarioLogueado?.rol === 'administrador_ventas' ? 'ADMINISTRADOR' : usuarioLogueado?.rol.replace('_', ' ').toUpperCase()}
-        </span>
-      </div>
-    </div>
-  </div>
-
-  {/* BLOQUE CENTRAL: Navegación Reordenada, Centrada y con LED */}
-  <nav className="nav-actions" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flexGrow: 1 }}>
-    {/* 1. EXCEL LOCAL */}
-    <button 
-      className={pestanaActual === 'excel_interno' ? 'nav-btn active' : 'nav-btn'} 
-      onClick={() => setPestanaActual('excel_interno')}
-      style={{ border: '1px solid rgba(0, 255, 255, 0.4)', minWidth: '135px' }}
-    >
-      📊 Tabla General
-    </button>
-
-    {/* 2. INFORME */}
-    <button 
-  className={pestanaActual === 'informes' ? 'nav-btn btn-header-report active' : 'nav-btn btn-header-report'} 
-  onClick={() => setPestanaActual('informes')}// Ahora abre el panel
-  disabled={cargando}
-  style={{ border: '1px solid rgba(0, 255, 127, 0.5)', minWidth: '135px' }}
->
-  {cargando ? '...' : '📧 INFORMES'}
-</button>
-
-    {/* 3. VENTAS */}
-    <button 
-      className={pestanaActual === 'ventas' ? 'nav-btn active' : 'nav-btn'} 
-      onClick={() => setPestanaActual('ventas')}
-      style={{ border: '1px solid rgba(255, 193, 7, 0.4)', minWidth: '135px' }}
-    >
-      💰 VENTAS
-    </button>
-
-    {/* 4. ALMACÉN (Solo no vendedores) */}
-    {usuarioLogueado?.rol !== 'vendedor' && (
-      <button 
-        className={pestanaActual === 'almacen' ? 'nav-btn active' : 'nav-btn'} 
-        onClick={() => setPestanaActual('almacen')}
-        style={{ border: '1px solid rgba(0, 123, 255, 0.5)', minWidth: '135px' }}
-      >
-        📖 ALMACÉN
-      </button>
-    )}
-    
-    {/* 5. REGISTRO (Solo no vendedores) */}
-    {usuarioLogueado?.rol !== 'vendedor' && (
-      <button 
-        className={pestanaActual === 'registro' ? 'nav-btn active' : 'nav-btn'} 
-        onClick={() => setPestanaActual('registro')}
-        style={{ border: '1px solid rgba(138, 43, 226, 0.5)', minWidth: '135px' }}
-      >
-        ➕ {editandoId ? 'EDITAR' : 'REGISTRAR'}
-      </button>
-    )}
-  </nav>
-
-  {/* BLOQUE DERECHA: Salida (Ancho fijo para equilibrar) */}
-  <div className="exit-section" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-    <button 
-      className="btn-exit" 
-      onClick={() => { 
-        setAutenticado(false); 
-        setUsuarioLogueado(null);
-        setUserDigitado("");
-        setPassDigitado("");
-        setPinDigitado("");
-        localStorage.clear();
-        sessionStorage.clear();
-      }}
-      style={{ border: '1px solid rgba(239, 68, 68, 0.6)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)', padding: '8px 15px', fontWeight: 'bold' }}
-    >
-      🚪 SALIR
-    </button>
-  </div>
-</header>
-
-     <main className="main-content">
-  {/* VISTA ALMACÉN */}
-      {pestanaActual === 'almacen' && (
-  <div className="inventory-view fade-in">
-    
-    {/* === BLOQUE DE TOTALES EXCLUSIVO PARA SUPER_ADMIN (DUEÑO) === */}
-    {usuarioLogueado?.rol === 'super_admin' && (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-around', 
-        background: '#1a1d23', 
-        padding: '15px', 
-        borderRadius: '12px', 
-        border: '1px solid #00ff7f',
-        marginBottom: '15px',
-        textAlign: 'center',
-        boxShadow: '0 4px 15px rgba(0, 255, 127, 0.1)'
-      }}>
-        <div>
-          <div style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '5px' }}>INVERSIÓN FILTRADA</div>
-          <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem' }}>S/ {inversionTotal.toFixed(2)}</div>
-        </div>
-        <div style={{ width: '1px', background: '#333' }}></div>
-        <div>
-          <div style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '5px' }}>GANANCIA </div>
-          <div style={{ color: '#00ff7f', fontWeight: 'bold', fontSize: '1.2rem' }}>S/ {utilidadTotal.toFixed(2)}</div>
-        </div>
-      </div>
-    )}
-    {/* ============================================================= */}
- 
-   <div className="search-container-modern" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
-      {/* --- BUSCADOR RESTAURADO --- */}
-{/* --- BUSCADOR CON FUERZA Y PROFUNDIDAD --- */}
-<div style={{
-  display: 'flex',
-  alignItems: 'center',
-  backgroundColor: '#020617', /* EL CAMBIO PRINCIPAL: Un tono casi negro muy profundo */
-  border: '1px solid #334155', /* Borde para delimitarlo claramente */
-  borderRadius: '8px',
-  minHeight: '42px',
-  padding: '0 15px',
-  flex: 1,
-  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' /* MAGIA VISUAL: Sombra interna que le da fuerza y relieve */
-}}>
-
-  <style>{`
-    #input-borrado-total {
-      background: transparent !important;
-      background-color: transparent !important;
-      border: none !important;
-      box-shadow: none !important;
-      outline: none !important;
-      border-radius: 0 !important;
-      color: #ffffff !important; /* Blanco puro para cuando escribas */
-      -webkit-appearance: none !important;
-    }
-    #input-borrado-total::placeholder {
-      color: #cbd5e1 !important; /* Gris mucho más claro y vibrante para que resalte */
-      opacity: 1 !important;
-    }
-  `}</style>
-
-  {/* LUPA */}
-  {busqueda === "" && (
-    <span style={{
-      marginRight: '12px',
-      color: '#e2e8f0', /* Lupa más brillante para acompañar la fuerza del fondo */
-      display: 'flex',
-      alignItems: 'center'
-    }}>
-      🔍
-    </span>
-  )}
-
-  {/* INPUT */}
-  <input
-    id="input-borrado-total"
-    type="text"
-    placeholder="Buscar por Serie en Almacén..."
-    value={busqueda}
-    onChange={(e) => setBusqueda(e.target.value)}
-    style={{
-      flex: 1,
-      width: '100%',
-      padding: 0,
-      margin: 0,
-      fontWeight: '500'
-    }}
-  />
-</div>
-
-      {/* --- CONTROLES DE FECHA Y BOTÓN (Con su espacio) --- */}
-      <div className="filter-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <input
-          type="date"
-          className="custom-date-picker"
-          value={fechaConsulta || ""}
-          onChange={(e) => setFechaConsulta(e.target.value)}
+      {esCelular ? (
+        <MenuMobile
+          usuarioLogueado={usuarioLogueado}
+          pestanaActual={pestanaActual}
+          setPestanaActual={setPestanaActual}
+          handleLogout={handleLogout}
+          cargando={cargando}
         />
-        <button className="btn-show-all" onClick={manejarVerTodo}>📋 VER TODO</button>
-      </div>
-    </div>
+      ) : (
+        <header className="blue-nav">
+          {/* ... Tu código de header de escritorio se mantiene aquí ... */}
+          {/* BLOQUE IZQUIERDA: Identidad */}
+          <div className="brand-section" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {(() => {
+              const nombreUsuario = usuarioLogueado?.nombre?.toUpperCase();
+              const avatarSrc = AVATARES_USUARIOS[nombreUsuario] || AVATARES_USUARIOS['DEFAULT'];
+              const esImagenUrl = avatarSrc.startsWith('http') || avatarSrc.startsWith('/');
+              return esImagenUrl ? <img src={avatarSrc} alt="logo" className="nav-logo" /> : <div className="nav-logo-emoji">{avatarSrc}</div>;
+            })()}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
+              <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold', whiteSpace: 'nowrap' }}>FINPRO STORE</h1>
+              <div className="user-info-display" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="welcome-badge" style={{ fontSize: '0.75rem' }}>
+                  ✅ {usuarioLogueado?.nombre.toUpperCase()}
+                </span>
+                <span className="role-badge" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                  🛡️ {usuarioLogueado?.rol === 'administrador_ventas' ? 'ADMINISTRADOR' : usuarioLogueado?.rol.replace('_', ' ').toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+          {/* BLOQUE CENTRAL: Navegación (Menú colapsable en móvil) */}
+          <nav className="nav-actions">
+            <button className={pestanaActual === 'excel_interno' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('excel_interno')} style={{ border: '1px solid rgba(0, 255, 255, 0.4)', minWidth: '135px' }}>
+              📊 Tabla General
+            </button>
+            <button className={pestanaActual === 'informes' ? 'nav-btn btn-header-report active' : 'nav-btn btn-header-report'} onClick={() => setPestanaActual('informes')} disabled={cargando} style={{ border: '1px solid rgba(0, 255, 127, 0.5)', minWidth: '135px' }}>
+              {cargando ? '...' : '📧 INFORMES'}
+            </button>
+            <button className={pestanaActual === 'ventas' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('ventas')} style={{ border: '1px solid rgba(255, 193, 7, 0.4)', minWidth: '135px' }}>
+              💰 VENTAS
+            </button>
+            {usuarioLogueado?.rol !== 'vendedor' && (
+              <button className={pestanaActual === 'almacen' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('almacen')} style={{ border: '1px solid rgba(0, 123, 255, 0.5)', minWidth: '135px' }}>
+                📖 ALMACÉN
+              </button>
+            )}
+            {usuarioLogueado?.rol !== 'vendedor' && (
+              <button className={pestanaActual === 'registro' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('registro')} style={{ border: '1px solid rgba(138, 43, 226, 0.5)', minWidth: '135px' }}>
+                ➕ {editandoId ? 'EDITAR' : 'REGISTRAR'}
+              </button>
+            )}
+          </nav>
+          {/* BLOQUE DERECHA: Salida (SOLO ESCRITORIO) */}
+          <div className="exit-section">
+            <button className="btn-exit" onClick={handleLogout} style={{ border: '1px solid rgba(239, 68, 68, 0.6)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)', padding: '8px 15px', fontWeight: 'bold' }}>
+              🚪 SALIR
+            </button>
+          </div>
+        </header>
+      )}
 
-    <AlmacenTabla 
-      laptops={laptopsFiltradas}
-      eliminarProducto={manejarEliminar}
-      marcarComoVendido={marcarComoVendido}
-      activarEdicion={activarEdicion} 
-      actualizarProducto={actualizarProducto}
-      usuarioLogueado={usuarioLogueado}
-      busqueda={busqueda}
-      setModalImagen={(img) => {
-        setModalImagen(img);
-        setFotoActual(Array.isArray(img) ? img[0] : img);
-      }} 
-    />
-  </div>
-)}
+      <main className="main-content">
+        {/* VISTA ALMACÉN */}
+        {pestanaActual === 'almacen' && (
+          <div className="inventory-view fade-in">
+            
+            {/* === BLOQUE DE TOTALES EXCLUSIVO PARA SUPER_ADMIN (DUEÑO) === */}
+            {usuarioLogueado?.rol === 'super_admin' && (
+              <div className="flex-mobile-stack" style={{ 
+                display: 'flex', 
+                justifyContent: 'space-around', 
+                background: '#1a1d23', 
+                padding: '15px', 
+                borderRadius: '12px', 
+                border: '1px solid #00ff7f',
+                marginBottom: '15px',
+                textAlign: 'center',
+                boxShadow: '0 4px 15px rgba(0, 255, 127, 0.1)'
+              }}>
+                <div>
+                  <div style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '5px' }}>INVERSIÓN FILTRADA</div>
+                  <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem' }}>S/ {inversionTotal.toFixed(2)}</div>
+                </div>
+                <div style={{ width: '1px', background: '#333' }}></div>
+                <div>
+                  <div style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '5px' }}>GANANCIA </div>
+                  <div style={{ color: '#00ff7f', fontWeight: 'bold', fontSize: '1.2rem' }}>S/ {utilidadTotal.toFixed(2)}</div>
+                </div>
+              </div>
+            )}
+            {/* ============================================================= */}
+        
+          <div className="search-container-modern flex-mobile-stack" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
+              {/* --- BUSCADOR CON FUERZA Y PROFUNDIDAD --- */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#020617',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              minHeight: '42px',
+              padding: '0 15px',
+              flex: 1,
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
+            }}>
 
-  {pestanaActual === 'informes' && (
-  <div className="animacion-entrada-seccion">
-    {/* Invocamos tu componente pasando las props necesarias */}
-    <PanelInformes 
-      laptops={laptops} 
-      manejarGeneracionReporte={manejarGeneracionReporte} 
-      cargando={cargando} 
-      usuarioLogueado={usuarioLogueado} 
-    />
-  </div>
-)}
+              <style>{`
+                #input-borrado-total {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  border-radius: 0 !important;
+                  color: #ffffff !important;
+                  -webkit-appearance: none !important;
+                }
+                #input-borrado-total::placeholder {
+                  color: #cbd5e1 !important;
+                  opacity: 1 !important;
+                }
+              `}</style>
 
-  {/* VISTA VENTAS REALIZADAS (NUEVA) */}
-  {/* VISTA VENTAS REALIZADAS */}
-{pestanaActual === 'ventas' && (
-  <VentasView 
-    laptops={laptops}
-    busqueda={busqueda}
-    setBusqueda={setBusqueda}
-    setPestanaActual={setPestanaActual}
-    usuarioLogueado={usuarioLogueado}
-    setModalImagen={setModalImagen}
-    setFotoActual={setFotoActual}
-    activarEdicion={activarEdicion}
-    eliminarProducto={manejarEliminar}
-    actualizarProducto={actualizarProducto}
-  />
-)}
+              {busqueda === "" && (
+                <span style={{
+                  marginRight: '12px',
+                  color: '#e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  🔍
+                </span>
+              )}
 
-{pestanaActual === 'registro' && (
-  <RegistroVentasView 
-    form={form}
-    setForm={setForm}
-    manejarCambio={manejarCambio}
-    manejarCambioModeloAuto={manejarCambioModeloAuto}
-    guardarLaptop={guardarLaptop}
-    cargando={cargando}
-    listaSeriales={listaSeriales}
-    setListaSeriales={setListaSeriales}
-    iniciarEscaneo={iniciarEscaneo}
-    cancelarEdicion={cancelarEdicion}
-    editandoId={editandoId}
-    usuarioLogueado={usuarioLogueado}
-    
-    OPCIONES_MARCAS={OPCIONES_MARCAS}
-    MODELOS_SUGERIDOS={MODELOS_SUGERIDOS}
-    OPCIONES_DESTINO={OPCIONES_DESTINO}
-    OPCIONES_ESTADO={OPCIONES_ESTADO}
-    setVistaActual={setPestanaActual} // <--- ¡Esta línea es la que falta!
-  />
-)}
+              <input
+                id="input-borrado-total"
+                type="text"
+                placeholder="Buscar por Serie en Almacén..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                style={{
+                  flex: 1,
+                  width: '100%',
+                  padding: 0,
+                  margin: 0,
+                  fontWeight: '500'
+                }}
+              />
+            </div>
 
-        {/* VISTA EXCEL INTERNO */}
+              <div className="filter-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input
+                  type="date"
+                  className="custom-date-picker"
+                  value={fechaConsulta || ""}
+                  onChange={(e) => setFechaConsulta(e.target.value)}
+                />
+                <button className="btn-show-all" onClick={manejarVerTodo}>📋 VER TODO</button>
+              </div>
+            </div>
+
+            <div className="table-wrapper-global">
+              <AlmacenTabla 
+                laptops={laptopsFiltradas}
+                eliminarProducto={manejarEliminar}
+                marcarComoVendido={marcarComoVendido}
+                activarEdicion={activarEdicion} 
+                actualizarProducto={actualizarProducto}
+                usuarioLogueado={usuarioLogueado}
+                busqueda={busqueda}
+                setModalImagen={(img) => {
+                  setModalImagen(img);
+                  setFotoActual(Array.isArray(img) ? img[0] : img);
+                }} 
+              />
+            </div>
+          </div>
+        )}
+
+        {pestanaActual === 'informes' && (
+          <div className="animacion-entrada-seccion">
+            <PanelInformes 
+              laptops={laptops} 
+              manejarGeneracionReporte={manejarGeneracionReporte} 
+              cargando={cargando} 
+              usuarioLogueado={usuarioLogueado} 
+            />
+          </div>
+        )}
+
+        {pestanaActual === 'ventas' && (
+          <VentasView 
+            laptops={laptops}
+            busqueda={busqueda}
+            setBusqueda={setBusqueda}
+            setPestanaActual={setPestanaActual}
+            usuarioLogueado={usuarioLogueado}
+            setModalImagen={setModalImagen}
+            setFotoActual={setFotoActual}
+            activarEdicion={activarEdicion}
+            eliminarProducto={manejarEliminar}
+            actualizarProducto={actualizarProducto}
+          />
+        )}
+
+        {pestanaActual === 'registro' && (
+          <RegistroVentasView 
+            form={form}
+            setForm={setForm}
+            manejarCambio={manejarCambio}
+            manejarCambioModeloAuto={manejarCambioModeloAuto}
+            guardarLaptop={guardarLaptop}
+            cargando={cargando}
+            listaSeriales={listaSeriales}
+            setListaSeriales={setListaSeriales}
+            iniciarEscaneo={iniciarEscaneo}
+            cancelarEdicion={cancelarEdicion}
+            editandoId={editandoId}
+            usuarioLogueado={usuarioLogueado}
+            
+            OPCIONES_MARCAS={OPCIONES_MARCAS}
+            MODELOS_SUGERIDOS={MODELOS_SUGERIDOS}
+            OPCIONES_DESTINO={OPCIONES_DESTINO}
+            OPCIONES_ESTADO={OPCIONES_ESTADO}
+            setVistaActual={setPestanaActual}
+          />
+        )}
+
         {pestanaActual === 'excel_interno' && (
-          <div className="fade-in">
+          <div className="fade-in table-wrapper-global">
             <HojaReportes 
               laptops={laptopsFiltradas} 
               usuarioLogueado={usuarioLogueado}
@@ -1336,7 +1316,7 @@ if (!autenticado) {
               setModalImagen={setModalImagen}
               fechaFiltro={fechaFiltro}
               setFechaFiltro={setFechaFiltro}
-              eliminarProducto={manejarEliminar}
+              eliminarProducto={eliminarProducto}
             />
           </div>
         )}
