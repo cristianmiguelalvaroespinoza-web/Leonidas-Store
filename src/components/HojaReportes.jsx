@@ -376,7 +376,7 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
         <div className={styles.estadoTabs} style={{ margin: 0 }}>
           <button onClick={() => setFiltroEstado('TODOS')} className={filtroEstado === 'TODOS' ? styles.active : ''}>📋 TODOS ({datos.length})</button>
           <button onClick={() => setFiltroEstado('STOCK')} className={filtroEstado === 'STOCK' ? `${styles.active} ${styles.stock}` : ''}>🟢 STOCK</button>
-          <button onClick={() => setFiltroEstado('VENDIDO')} className={filtroEstado === 'VENDIDO' ? `${styles.active} ${styles.vendido}` : ''}>🔴 VENDIDOS</button>
+          <button onClick={() => setFiltroEstado('VENDIDO')} className={filtroEstado === 'VENDIDO' ? `${styles.active} ${styles.vendido}` : ''}>🔴 VENDIDOS / SALIDA</button>
         </div>
 
        {/* --- CONTENEDOR: SELECTOR + MINI CALENDARIO DE MESES --- */}

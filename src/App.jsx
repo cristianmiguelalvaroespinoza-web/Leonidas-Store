@@ -71,6 +71,11 @@ const [usuarioPendiente, setUsuarioPendiente] = useState(null);
   const [modalImagen, setModalImagen] = useState(null);
   const [fotoActual, setFotoActual] = useState("");
   const [escaneando, setEscaneando] = useState(false);
+  // NUEVOS ESTADOS PARA EL FORMATEO
+  const [mostrarModalFormateo, setMostrarModalFormateo] = useState(false);
+  const [tipoFormateoSeleccionado, setTipoFormateoSeleccionado] = useState(null); // 'mes' o 'total'
+  const [mesFormateo, setMesFormateo] = useState('');
+  const [anioFormateo, setAnioFormateo] = useState('');
 
   const [form, setForm] = useState({
     marca: '', modelo: '', precio: '', precio_costo: '', serial: '', 
@@ -80,6 +85,8 @@ const [usuarioPendiente, setUsuarioPendiente] = useState(null);
     estado: 'STOCK', imagenes: [],
     cantidad: 1 
   });
+  const [codigoConfirmacion, setCodigoConfirmacion] = useState(''); // Para el código de formateo
+  const [easterEggConfirmado, setEasterEggConfirmado] = useState(false); // Para el easter egg
 const [verPassword, setVerPassword] = useState(false);
 
   const cerrarGaleria = () => {
@@ -638,6 +645,70 @@ const marcarComoVendido = async (laptop) => {
   }
 };
 
+// --- NUEVA FUNCIÓN: FORMATEAR INVENTARIO (ELIMINACIÓN MASIVA) ---
+const handleFormatearInventario = async () => {
+  if (codigoConfirmacion !== "2260") {
+    alert("❌ Código de confirmación incorrecto.");
+    return;
+  }
+
+  setCargando(true);
+  try {
+    let laptopsAEliminar = [];
+    let mensajeConfirmacion = "";
+
+    if (tipoFormateoSeleccionado === 'total') {
+      laptopsAEliminar = [...laptops]; // Todas las laptops
+      mensajeConfirmacion = `⚠️ Estás a punto de eliminar TODOS los ${laptopsAEliminar.length} equipos del inventario. Esta acción es IRREVERSIBLE. ¿Estás ABSOLUTAMENTE seguro?`;
+    } else if (tipoFormateoSeleccionado === 'mes' && mesFormateo && anioFormateo) {
+      laptopsAEliminar = laptops.filter(lap => {
+        if (!lap.fecha) return false;
+        const [dia, mes, anio] = lap.fecha.split('/');
+        // Asegurarse de que el mes y año de la laptop coincidan con los seleccionados
+        return parseInt(mes) === parseInt(mesFormateo) && parseInt(anio) === parseInt(anioFormateo);
+      });
+      mensajeConfirmacion = `⚠️ Estás a punto de eliminar ${laptopsAEliminar.length} equipos del mes ${mesFormateo}/${anioFormateo}. Esta acción es IRREVERSIBLE. ¿Estás ABSOLUTAMENTE seguro?`;
+    } else {
+      alert("❌ Selección de formateo inválida.");
+      setCargando(false);
+      return;
+    }
+
+    if (laptopsAEliminar.length === 0) {
+      alert("No se encontraron equipos para formatear en el periodo seleccionado.");
+      setCargando(false);
+      return;
+    }
+
+    const confirmacionFinal = window.confirm(mensajeConfirmacion);
+    if (!confirmacionFinal) {
+      setCargando(false);
+      return;
+    }
+
+    // Iterar y eliminar cada producto
+    for (const lap of laptopsAEliminar) {
+      // Reutilizamos la función de servicio eliminarProducto
+      await eliminarProducto(lap.fireId, lap.serial); 
+    }
+
+    alert(`✅ ${laptopsAEliminar.length} equipos formateados correctamente.`);
+    // Resetear estados del modal
+    setMostrarModalFormateo(false);
+    setCodigoConfirmacion("");
+    setMesFormateo("");
+    setAnioFormateo("");
+    setTipoFormateoSeleccionado(null);
+    setEasterEggConfirmado(false); // Resetear easter egg
+  } catch (err) {
+    console.error("Error al formatear:", err);
+    alert("❌ Error al formatear equipos: " + err.message);
+  } finally {
+    setCargando(false);
+  }
+};
+
+
   // --- DENTRO DE APP.JSX ---
 const laptopsFiltradas = laptops.filter(lap => {
   if (!lap) return false;
@@ -963,33 +1034,32 @@ if (!autenticado) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               
               {/* OPCIÓN GMAIL PDF */}
-              {/* OPCIÓN GMAIL PDF */}
-<button 
-  onClick={() => manejarGeneracionReporte('pdf')} // <--- CAMBIO AQUÍ
-  className="report-btn"
-  disabled={cargando}
-  style={{ border: '1px solid #00ff7f', color: '#00ff7f' }}
->
-  {cargando ? '⏳ ENVIANDO...' : '📄 Enviar Informe Formal (PDF)'}
-</button>
+              <button 
+                onClick={() => manejarGeneracionReporte('pdf', { tipo: tipoPeriodo, fecha: fechaPersonalizada })}
+                className="report-btn"
+                disabled={cargando}
+                style={{ border: '1px solid #00ff7f', color: '#00ff7f' }}
+              >
+                {cargando ? '⏳ ENVIANDO...' : '📄 Enviar Informe Formal (PDF)'}
+              </button>
 
-{/* OPCIÓN GMAIL TEXTO */}
-<button 
-  onClick={() => manejarGeneracionReporte('texto')} // <--- CAMBIO AQUÍ
-  className="report-btn"
-  style={{ border: '1px solid #ffffff', color: '#ffffff' }}
->
-  📧 Enviar Resumen Rápido (Texto)
-</button>
+              {/* OPCIÓN GMAIL TEXTO */}
+              <button 
+                onClick={() => manejarGeneracionReporte('texto', { tipo: tipoPeriodo, fecha: fechaPersonalizada })}
+                className="report-btn"
+                style={{ border: '1px solid #ffffff', color: '#ffffff' }}
+              >
+                📧 Enviar Resumen Rápido (Texto)
+              </button>
 
-{/* OPCIÓN WHATSAPP */}
-<button 
-  onClick={() => manejarGeneracionReporte('whatsapp')} // <--- CAMBIO AQUÍ
-  className="report-btn"
-  style={{ border: '1px solid #25d366', color: '#25d366' }}
->
-  📱 Enviar por WhatsApp
-</button>
+              {/* OPCIÓN WHATSAPP */}
+              <button 
+                onClick={() => manejarGeneracionReporte('whatsapp', { tipo: tipoPeriodo, fecha: fechaPersonalizada })}
+                className="report-btn"
+                style={{ border: '1px solid #25d366', color: '#25d366' }}
+              >
+                📱 Enviar por WhatsApp
+              </button>
             </div>
 
             <button 
@@ -1001,82 +1071,218 @@ if (!autenticado) {
           </div>
         </div>
       )}
-      {/* INTERFAZ DEL ESCÁNER (Aparece arriba si está activo) */}
-     {/* Visor de cámara mejorado para Leonidas Store */}
-{escaneando && (
-  <div style={{ 
-    position: 'fixed', 
-    top: 0, 
-    left: 0, 
-    width: '100vw', 
-    height: '100vh', 
-    background: '#020617', // Fondo oscuro sólido
-    zIndex: 20000, // Superior al encabezado azul
-    display: 'flex', 
-    flexDirection: 'column', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    padding: '20px'
-  }}>
-    <div style={{ width: '100%', maxWidth: '400px' }}>
-      <div id="reader" style={{ background: 'white', borderRadius: '10px', overflow: 'hidden' }}></div>
-      
-      <button 
-        onClick={() => { 
-          // Limpieza manual al cerrar
-          const container = document.getElementById('reader');
-          if (container) container.innerHTML = '';
-          setEscaneando(false); 
-        }}
-        style={{ 
-          width: '100%', 
-          marginTop: '20px', 
-          padding: '15px', 
-          background: '#ef4444', 
-          color: 'white', 
-          border: 'none', 
-          borderRadius: '8px',
-          fontWeight: 'bold',
-          fontSize: '1rem'
-        }}
-      >
-        CANCELAR ESCANEO
-      </button>
-    </div>
-  </div>
-)}
-      {/* MODAL DE GALERÍA */}
-      {modalImagen && (
-  <div className="modal-overlay active" onClick={() => { setModalImagen(null); setFotoActual(null); }}>
-    <div className="modal-content-galeria" onClick={(e) => e.stopPropagation()}>
-      
-      {/* Botón X superior para un cierre rápido */}
-      <button className="close-x-galeria" onClick={() => { setModalImagen(null); setFotoActual(null); }}>✕</button>
 
-      <div className="galeria-main-wrapper">
-        <img 
-          src={fotoActual || (Array.isArray(modalImagen) ? modalImagen[0] : modalImagen)} 
-          alt="Laptop Principal" 
-          className="galeria-imagen-principal"
-        />
-      </div>
+      {/* MODAL DE FORMATEO (ELIMINACIÓN MASIVA) */}
+      {mostrarModalFormateo && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(5px)'
+        }}>
+          <div style={{
+            backgroundColor: '#1a1d23', padding: '30px', borderRadius: '15px',
+            border: '2px solid #ef4444', boxShadow: '0 0 25px rgba(239, 68, 68, 0.2)',
+            width: '400px', textAlign: 'center', position: 'relative'
+          }}>
+            {easterEggConfirmado ? (
+              <div>
+                <img 
+                  src="https://p16-common-sign.tiktokcdn-us.com/tos-maliva-p-0068/osdCIBirqEBqBzAArmAof7ib0dINIlrgEAYrdB~tplv-tiktokx-origin.image?dr=9636&x-expires=1779879600&x-signature=Rn0Ybgl4WMlh2w2fZcw7oCM6RQI%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=55bbe6a9&idc=useast5" 
+                  alt="Easter Egg" 
+                  style={{ maxWidth: '100%', borderRadius: '10px', border: '2px solid #00ff7f' }} 
+                />
+                <p style={{color: '#00ff7f', marginTop: '15px', fontWeight: 'bold'}}>TIENES 14? ACTIVA CAM</p>
+                <button 
+                  onClick={() => {
+                    setEasterEggConfirmado(false);
+                    setCodigoConfirmacion('');
+                  }}
+                  style={{ background: 'none', border: '1px solid #aaa', color: '#aaa', cursor: 'pointer', fontWeight: 'bold', padding: '8px 16px', borderRadius: '8px', marginTop: '10px' }}
+                >
+                  VOLVER
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 style={{ color: '#ef4444', marginTop: 0 }}>🗑️ FORMATEAR INVENTARIO</h2>
+                <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '20px' }}>
+                  Esta acción eliminará equipos de forma PERMANENTE, Por favor seleccione el período, MES o TODO.
+                </p>
 
-      {Array.isArray(modalImagen) && modalImagen.length > 1 && (
-        <div className="galeria-thumbnails-bar">
-          {modalImagen.map((url, index) => (
-            <img 
-              key={index}
-              src={url} 
-              alt={`Vista ${index + 1}`} 
-              className={`galeria-thumb ${fotoActual === url ? 'active-thumb' : ''}`}
-              onClick={() => setFotoActual(url)}
-            />
-          ))}
+                {/* Selector de tipo de formateo */}
+                <div style={{ 
+                  display: 'flex', gap: '10px', marginBottom: '25px', background: 'rgba(255,255,255,0.05)', 
+                  padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <button 
+                    type="button"
+                    onClick={() => { setTipoFormateoSeleccionado('mes'); setCodigoConfirmacion(''); }}
+                    style={{
+                      flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                      background: tipoFormateoSeleccionado === 'mes' ? '#ef4444' : 'transparent',
+                      color: '#fff', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s'
+                    }}
+                  >
+                    POR MES
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => { setTipoFormateoSeleccionado('total'); setMesFormateo(''); setAnioFormateo(''); setCodigoConfirmacion(''); }}
+                    style={{
+                      flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                      background: tipoFormateoSeleccionado === 'total' ? '#ef4444' : 'transparent',
+                      color: '#fff', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s'
+                    }}
+                  >
+                    TODO EL INVENTARIO
+                  </button>
+                </div>
+
+                {tipoFormateoSeleccionado === 'mes' && (
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                    <select
+                      value={mesFormateo}
+                      onChange={(e) => setMesFormateo(e.target.value)}
+                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #333', background: '#0F172A', color: '#fff' }}
+                    >
+                      <option value="">Selecciona Mes</option>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                        <option key={m} value={String(m).padStart(2, '0')}>{new Date(0, m - 1).toLocaleString('es-PE', { month: 'long' }).toUpperCase()}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={anioFormateo}
+                      onChange={(e) => setAnioFormateo(e.target.value)}
+                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #333', background: '#0F172A', color: '#fff' }}
+                    >
+                      <option value="">Selecciona Año</option>
+                      {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <input
+                  type="password"
+                  maxLength="4"
+                  placeholder="Ingresa código de confirmación (2260)"
+                  value={codigoConfirmacion}
+                  onChange={(e) => setCodigoConfirmacion(e.target.value.replace(/\D/g, ""))}
+                  style={{
+                    width: 'calc(100% - 20px)', padding: '12px 10px', marginBottom: '20px',
+                    borderRadius: '8px', border: '1px solid #ef4444', background: '#0F172A',
+                    color: '#fff', fontSize: '1rem', textAlign: 'center'
+                  }}
+                />
+                
+                {codigoConfirmacion === '0014' ? (
+                  <div style={{marginTop: '10px'}}>
+                    <p style={{color: '#ffc107', margin: '0 0 10px 0', fontWeight: 'bold'}}>Código Valido</p>
+                    <button 
+                        onClick={() => setEasterEggConfirmado(true)}
+                        className="report-btn"
+                        style={{ border: '1px solid #ffc107', color: '#ffc107', marginBottom: '10px' }}
+                    >
+                        ❓ ¿Estás seguro de esta acción? ❓
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={handleFormatearInventario}
+                    className="report-btn"
+                    disabled={cargando || codigoConfirmacion !== '2260' || (tipoFormateoSeleccionado === 'mes' && (!mesFormateo || !anioFormateo))}
+                    style={{ border: '1px solid #ef4444', color: '#ef4444', marginBottom: '10px' }}
+                  >
+                    {cargando ? '⏳ FORMATEANDO...' : '🗑️ CONFIRMAR FORMATEO'}
+                  </button>
+                )}
+
+                <button 
+                  onClick={() => {
+                    setMostrarModalFormateo(false);
+                    setCodigoConfirmacion('');
+                    setMesFormateo(''); // Mantener reseteo
+                    setAnioFormateo(''); // Mantener reseteo
+                    setTipoFormateoSeleccionado(null);
+                    setEasterEggConfirmado(false); // Añadir reseteo
+                  }}
+                  style={{ 
+                    background: 'transparent',
+                    border: '1px solid #555',
+                    color: '#aaa',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    marginTop: '10px',
+                    transition: 'all 0.2s ease-in-out'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = '#777'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#555'; }}
+                >
+                  CANCELAR
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
-    </div>
-  </div>
-)}
+
+      {/* INTERFAZ DEL ESCÁNER (Aparece arriba si está activo) */}
+     {/* Visor de cámara mejorado para Leonidas Store */}
+      {escaneando && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          background: '#020617', zIndex: 20000, display: 'flex', flexDirection: 'column', 
+          alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{ width: '100%', maxWidth: '400px' }}>
+            <div id="reader" style={{ background: 'white', borderRadius: '10px', overflow: 'hidden' }}></div>
+            <button 
+              onClick={() => { 
+                const container = document.getElementById('reader');
+                if (container) container.innerHTML = '';
+                setEscaneando(false); 
+              }}
+              style={{ 
+                width: '100%', marginTop: '20px', padding: '15px', background: '#ef4444', 
+                color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem'
+              }}
+            >
+              CANCELAR ESCANEO
+            </button>
+          </div>
+        </div>
+      )}
+      {/* MODAL DE GALERÍA */}
+      {modalImagen && (
+        <div className="modal-overlay active" onClick={() => { setModalImagen(null); setFotoActual(null); }}>
+          <div className="modal-content-galeria" onClick={(e) => e.stopPropagation()}>
+            <button className="close-x-galeria" onClick={() => { setModalImagen(null); setFotoActual(null); }}>✕</button>
+            <div className="galeria-main-wrapper">
+              <img 
+                src={fotoActual || (Array.isArray(modalImagen) ? modalImagen[0] : modalImagen)} 
+                alt="Laptop Principal" 
+                className="galeria-imagen-principal"
+              />
+            </div>
+            {Array.isArray(modalImagen) && modalImagen.length > 1 && (
+              <div className="galeria-thumbnails-bar">
+                {modalImagen.map((url, index) => (
+                  <img 
+                    key={index}
+                    src={url} 
+                    alt={`Vista ${index + 1}`} 
+                    className={`galeria-thumb ${fotoActual === url ? 'active-thumb' : ''}`}
+                    onClick={() => setFotoActual(url)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {esCelular ? (
         <MenuMobile
@@ -1100,9 +1306,11 @@ if (!autenticado) {
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
               <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold', whiteSpace: 'nowrap' }}>FINPRO STORE</h1>
               <div className="user-info-display" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="welcome-badge" style={{ fontSize: '0.75rem' }}>
-                  ✅ {usuarioLogueado?.nombre.toUpperCase()}
-                </span>
+                {usuarioLogueado?.rol !== 'super_admin' && (
+                  <span className="welcome-badge" style={{ fontSize: '0.75rem' }}>
+                    ✅ {usuarioLogueado?.nombre.toUpperCase()}
+                  </span>
+                )}
                 <span className="role-badge" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
                   🛡️ {usuarioLogueado?.rol === 'administrador_ventas' ? 'ADMINISTRADOR' : usuarioLogueado?.rol.replace('_', ' ').toUpperCase()}
                 </span>
@@ -1237,6 +1445,32 @@ if (!autenticado) {
                   onChange={(e) => setFechaConsulta(e.target.value)}
                 />
                 <button className="btn-show-all" onClick={manejarVerTodo}>📋 VER TODO</button>
+                {usuarioLogueado?.rol === 'super_admin' && (
+                  <button
+                    className="btn-show-all"
+                    onClick={() => setMostrarModalFormateo(true)}
+                    style={{ 
+                      background: '#ef4444', 
+                      color: 'white', 
+                      border: 'none', 
+                      boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)',
+                      transition: 'all 0.3s ease-in-out',
+                      transform: 'scale(1)'
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.background = '#d03030';
+                        e.currentTarget.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.6)';
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.3)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  >
+                    🗑️ FORMATEAR
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1309,6 +1543,87 @@ if (!autenticado) {
 
         {pestanaActual === 'excel_interno' && (
           <div className="fade-in table-wrapper-global">
+            {/* Controles de filtro para Tabla General */}
+            <div className="search-container-modern flex-mobile-stack" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, marginBottom: '15px' }}>
+              {/* --- BUSCADOR --- */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#020617',
+                border: '1px solid #334155',
+                borderRadius: '8px',
+                minHeight: '42px',
+                padding: '0 15px',
+                flex: 1,
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
+              }}>
+                {busqueda === "" && (
+                  <span style={{
+                    marginRight: '12px',
+                    color: '#e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    🔍
+                  </span>
+                )}
+                <input
+                  id="input-borrado-total-excel" // ID único para este input
+                  type="text"
+                  placeholder="Buscar en Tabla General..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  style={{
+                    flex: 1,
+                    width: '100%',
+                    padding: 0,
+                    margin: 0,
+                    fontWeight: '500',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: '#ffffff',
+                    '-webkit-appearance': 'none'
+                  }}
+                />
+              </div>
+
+              <div className="filter-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input
+                  type="date"
+                  className="custom-date-picker"
+                  value={fechaFiltro || ""} // Usar fechaFiltro para esta sección
+                  onChange={(e) => setFechaFiltro(e.target.value)}
+                />
+                <button className="btn-show-all" onClick={manejarVerTodo}>📋 VER TODO</button>
+                {usuarioLogueado?.rol === 'super_admin' && (
+                  <button
+                    className="btn-show-all"
+                    onClick={() => setMostrarModalFormateo(true)}
+                    style={{ 
+                      background: '#ef4444', 
+                      color: 'white', 
+                      border: 'none', 
+                      boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)',
+                      transition: 'all 0.3s ease-in-out',
+                      transform: 'scale(1)'
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.background = '#d03030';
+                        e.currentTarget.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.6)';
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.3)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  >
+                    🗑️ FORMATEAR
+                  </button>
+                )}
+              </div>
+            </div>
             <HojaReportes 
               laptops={laptopsFiltradas} 
               usuarioLogueado={usuarioLogueado}
@@ -1316,7 +1631,7 @@ if (!autenticado) {
               setModalImagen={setModalImagen}
               fechaFiltro={fechaFiltro}
               setFechaFiltro={setFechaFiltro}
-              eliminarProducto={eliminarProducto}
+              eliminarProducto={manejarEliminar}
             />
           </div>
         )}

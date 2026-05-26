@@ -268,6 +268,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
       if (nombreEnDB.includes('DAVID')) asignado = 'DAVID';
       else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
       else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
+      else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
       else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
       else asignado = 'LEONIDAS';
 
@@ -294,11 +295,14 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         const nombreEnDB = (l.responsable || "").toUpperCase();
         const rolEnDB = (l.rol_responsable || "").trim().toLowerCase();
         let asignado = '';
-        if (rolEnDB === 'super_admin') asignado = 'LEONIDAS';
-        else if (nombreEnDB.includes('DAVID')) asignado = 'DAVID';
+
+        if (nombreEnDB.includes('DAVID')) asignado = 'DAVID';
         else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
         else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
-        else if (rolEnDB === 'admin_2') asignado = 'DAVID';
+        else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
+        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
+        else asignado = 'LEONIDAS';
+
         return asignado === nombre;
       });
       const datosExcel = [
@@ -367,11 +371,14 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         const nombreEnDB = (l.responsable || "").toUpperCase();
         const rolEnDB = (l.rol_responsable || "").trim().toLowerCase();
         let asignado = '';
-        if (rolEnDB === 'super_admin') asignado = 'LEONIDAS';
-        else if (nombreEnDB.includes('DAVID')) asignado = 'DAVID';
+
+        if (nombreEnDB.includes('DAVID')) asignado = 'DAVID';
         else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
         else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
-        else if (rolEnDB === 'admin_2') asignado = 'DAVID';
+        else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
+        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
+        else asignado = 'LEONIDAS';
+
         return asignado === nombre;
       });
       doc.setFontSize(11);
@@ -467,7 +474,8 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
       'LEONIDAS': { cantidad: 0, total: 0, color: '#00ff7f' },
       'DAVID': { cantidad: 0, total: 0, color: '#3b82f6' },
       'CRISTOFER': { cantidad: 0, total: 0, color: '#0ea5e9' },
-      'YAEL': { cantidad: 0, total: 0, color: '#a855f7' }
+      'YAEL': { cantidad: 0, total: 0, color: '#a855f7' },
+      'PERSONAL ADMINISTRADOR': { cantidad: 0, total: 0, color: '#f59e0b' }
     };
 
     registrosParaTabla.forEach(l => {
@@ -477,13 +485,15 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         
         let asignado = '';
 
-        // Prioridad 1: Búsqueda por nombre clave
+        // Lógica de asignación de ventas
         if (nombreEnDB.includes('DAVID')) asignado = 'DAVID';
         else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
         else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
-        // Prioridad 2: Si es super_admin o dice Leonidas
+        // Prioridad para el rol de administrador
+        else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
+        // Prioridad para el super admin
         else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
-        // Prioridad 3: Solo si está vacío o es un nombre desconocido, va a Leonidas
+        // Caso por defecto: cualquier otro usuario va a Leonidas
         else asignado = 'LEONIDAS';
 
         if (data[asignado]) {
@@ -586,7 +596,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
           {/* ... Encabezado de tabla y botones de historial se mantienen igual ... */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Users size={22} color="#00ff7f" /> RENDIMIENTO POR VENDEDOR
+              <Users size={22} color="#00ff7f" /> VENTAS REALIZADAS
             </h3>
             
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
