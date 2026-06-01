@@ -11,7 +11,7 @@ const obtenerMesYAnio = (fechaString) => {
   return `${meses[parseInt(mes) - 1]} ${anio}`;
 };
 
-const HojaReportes = ({ usuarioLogueado, activarEdicion, setModalImagen, fechaFiltro, setFechaFiltro }) => {
+const HojaReportes = ({ usuarioLogueado, activarEdicion, setModalImagen, fechaFiltro, setFechaFiltro, tienePermiso }) => {
   const [datos, setDatos] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
@@ -228,11 +228,13 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
     return esSuperAdmin || esAdmin2 || item.responsable === usuarioLogueado?.nombre;
   };
 
-  const tienePermisoCritico = (item) => {
-    if (esVendedor || esAdmin2) return false;
-    return esSuperAdmin || item.responsable === usuarioLogueado?.nombre;
+  const puedeEditar = (item) => {
+    return tienePermiso && tienePermiso('EDITAR_REGISTRO');
   };
 
+  const puedeEliminar = (item) => {
+    return tienePermiso && tienePermiso('ELIMINAR_REGISTRO');
+  };
   return (
     <div className={styles.reportesContainer}>
       
@@ -475,8 +477,6 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
       const estaExpandido = diasExpandidos[diaActual] !== false;
 
       // --- TUS VARIABLES ORIGINALES INTACTAS ---
-      const puedeCambiarEstado = tienePermisoEstado(item);
-      const puedeEditarOEliminar = tienePermisoCritico(item);
       const estadoStr = (item.estado || "STOCK").toUpperCase();
       const colorEstado = estadoStr === 'VENDIDO' ? '#ef4444' : 
                           estadoStr === 'SEPARADO' ? '#f59e0b' : '#10b981';
@@ -548,11 +548,11 @@ const [diasExpandidos, setDiasExpandidos] = useState({});
                       >
                         {tieneFotos ? '👁️' : '🚫'}
                       </button>
-                      {puedeEditarOEliminar && (
-                        <>
-                          <button onClick={() => activarEdicion(item)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px' }}>✏️</button>
-                          <button onClick={() => window.confirm("¿Eliminar?") && eliminarProducto(item.fireId, item.serial)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px' }}>🗑️</button>
-                        </>
+                      {puedeEditar(item) && (
+                        <button onClick={() => activarEdicion(item)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px' }}>✏️</button>
+                      )}
+                      {puedeEliminar(item) && (
+                        <button onClick={() => window.confirm("¿Eliminar?") && eliminarProducto(item.fireId, item.serial)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px' }}>🗑️</button>
                       )}
                     </div>
                   </td>

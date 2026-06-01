@@ -1,5 +1,6 @@
 
 import { User, Lock, Eye, EyeOff, Menu, X } from 'lucide-react';
+// --- NUEVO: Imports de Firebase para la base de datos en la nube ---
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import AlmacenTabla from './components/AlmacenTabla';
@@ -12,6 +13,7 @@ import { enviarInformeGmailPDF } from './serviciosReportes';
 import HojaReportes from './components/HojaReportes';
 import RegistroVentasView from './components/RegistroVentasView';
 import logoFinpro from './assets/logo-finpro.png'; // La ruta donde guardaste la imagen
+import PanelGestionUsuarios from './components/PanelGestionUsuarios'; // NUEVO: Panel de gestión
 
 import { 
   CONFIG, OPCIONES_MARCAS, OPCIONES_RAM,
@@ -19,12 +21,15 @@ import {
   OPCIONES_DESTINO, MODELOS_SUGERIDOS, OPCIONES_ESTADO, PRESETS_MODELOS
 } from "./constants/config.js";
 
-import { LISTA_USUARIOS } from "./constants/usuarios.js";
+import { LISTA_USUARIOS as initialUsers } from "./constants/usuarios.js"; // Renombrado para el estado
+import { PERMISSIONS, ROLES_PERMISSIONS } from './permissions.js'; // CORREGIDO: Ruta del sistema de permisos
 
 import { 
   subirACloudinary, sincronizarConExcel,
-  guardarProducto, actualizarProducto, eliminarProducto, suscribirseAInventario, enviarInformeEmail 
+  guardarProducto, actualizarProducto, eliminarProducto, suscribirseAInventario, enviarInformeEmail,
 } from './services/api';
+import { db } from './firebase';
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, writeBatch, setDoc } from "firebase/firestore";
 
 // --- CONFIGURACIÓN DE AVATARES PERSONALIZADOS (LEONIDAS STORE) ---
 const AVATARES_USUARIOS = {
@@ -55,8 +60,11 @@ const [usuarioPendiente, setUsuarioPendiente] = useState(null);
   const [userDigitado, setUserDigitado] = useState(""); 
   const [tipoPeriodo, setTipoPeriodo] = useState('dia');
   const [passDigitado, setPassDigitado] = useState(""); 
+  const [configCargada, setConfigCargada] = useState(false); // NUEVO: Estado de carga para datos de la nube
   const [fechaPersonalizada, setFechaPersonalizada] = useState(new Date().toISOString().split('T')[0]);
   const [usuarioLogueado, setUsuarioLogueado] = useState(null);
+  const [listaUsuarios, setListaUsuarios] = useState([]); // MODIFICADO: Inicia vacío, se llenará desde la nube
+  const [rolesConPermisos, setRolesConPermisos] = useState({}); // MODIFICADO: Inicia vacío, se llenará desde la nube
   const [pestanaActual, setPestanaActual] = useState("excel_interno");
   const [laptops, setLaptops] = useState([]);
   const [busqueda, setBusqueda] = useState("");
@@ -101,8 +109,141 @@ const [verPassword, setVerPassword] = useState(false);
     setUserDigitado("");
     setPassDigitado("");
     setPinDigitado("");
-    localStorage.clear();
-    sessionStorage.clear();
+  };
+
+  // --- NUEVO: GESTOR DE PERMISOS ---
+  const tienePermiso = (permisoRequerido) => {
+    return usuarioLogueado?.permissions?.includes(permisoRequerido) ?? false;
+  };
+
+  // --- NUEVO: MANEJADOR PARA ACTIVAR/DESACTIVAR USUARIOS ---
+  const handleToggleActivo = async (userId, currentState) => {
+    if (!window.confirm("¿Estás seguro de cambiar el estado de este usuario?")) return;
+    try {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { activo: !currentState });
+      alert("✅ Estado del usuario actualizado en la nube.");
+    } catch (error) {
+      console.error("Error al actualizar estado de usuario:", error);
+      alert("❌ Error al actualizar el estado del usuario.");
+    }
+};
+
+  // --- NUEVO: MANEJADOR PARA EXCEPCIONES DE PERMISOS POR USUARIO ---
+  const handleUpdateUserPermissionOverrides = async (userId, newOverrides) => {
+    try {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { permissionOverrides: newOverrides });
+      // No se muestra alerta para no saturar la UI con cada cambio.
+    } catch (error) {
+      console.error("Error al actualizar excepciones de permisos:", error);
+      alert("❌ Error al guardar las excepciones de permisos.");
+    }
+  };
+
+  // --- NUEVO: MANEJADORES PARA ROLES Y PERMISOS ---
+  const handleAddRole = async (newRoleName) => {
+    if (!newRoleName || rolesConPermisos[newRoleName]) {
+      alert("❌ Nombre de rol inválido o ya existente.");
+      return false;
+    }
+    try {
+      await setDoc(doc(db, "roles", newRoleName), { permissions: [] });
+      alert(`✅ Rol "${newRoleName}" creado en la nube.`);
+      return true;
+    } catch (error) {
+      console.error("Error al crear rol:", error);
+      alert("❌ Error al crear el rol.");
+      return false;
+    }
+  };
+
+  const handleUpdateRolePermissions = async (role, permissions) => {
+    try {
+      const roleRef = doc(db, "roles", role);
+      await updateDoc(roleRef, { permissions: permissions });
+    } catch (error) {
+      console.error("Error al actualizar permisos de rol:", error);
+      alert("❌ Error al guardar los permisos del rol.");
+    }
+  };
+
+  const handleUpdateUserRole = async (userId, newRole) => {
+    if (!window.confirm("¿Estás seguro de cambiar el rol de este usuario?")) return;
+    try {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { rol: newRole });
+      alert("✅ Rol del usuario actualizado en la nube.");
+    } catch (error) {
+      console.error("Error al cambiar rol de usuario:", error);
+      alert("❌ Error al cambiar el rol del usuario.");
+    }
+  };
+
+  const handleCreateUser = async (newUserData) => {
+    // Validar que el nombre de usuario no exista
+    if (listaUsuarios.some(u => u.user.toLowerCase() === newUserData.user.toLowerCase())) {
+      alert('❌ Ya existe un usuario con ese nombre de login.');
+      return false;
+    }
+
+    const newUserPayload = {
+      ...newUserData,
+      activo: true,
+      // Se asigna una hoja de cálculo por defecto. Esto podría ser un campo más en el futuro.
+      hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit#gid=0"
+    };
+
+    try {
+      const docRef = await addDoc(collection(db, "usuarios"), newUserPayload);
+      alert(`✅ Usuario "${newUserData.nombre}" creado exitosamente en la nube.`);
+      return true;
+    } catch (error) {
+      console.error("Error al crear usuario:", error);
+      alert("❌ Error al crear el usuario.");
+      return false;
+    }
+  };
+
+  const handleDeleteRole = async (roleToDelete) => {
+    // Seguridad: No permitir eliminar roles base del sistema.
+    const rolesBase = Object.keys(ROLES_PERMISSIONS);
+    if (rolesBase.includes(roleToDelete)) {
+      alert(`❌ El rol "${roleToDelete}" es un rol base del sistema y no se puede eliminar.`);
+      return false;
+    }
+    // Seguridad: Verificar si algún usuario tiene este rol asignado.
+    if (listaUsuarios.some(user => user.rol === roleToDelete)) {
+      alert(`❌ No se puede eliminar el rol "${roleToDelete}" porque está asignado a uno o más usuarios. Reasigna los usuarios a otro rol primero.`);
+      return false;
+    }
+    if (window.confirm(`¿Estás seguro de eliminar el rol "${roleToDelete}"? Esta acción no se puede deshacer.`)) {
+      try {
+        await deleteDoc(doc(db, "roles", roleToDelete));
+        alert(`✅ Rol "${roleToDelete}" eliminado de la nube.`);
+        return true;
+      } catch (error) {
+        console.error("Error al eliminar rol:", error);
+        alert("❌ Error al eliminar el rol.");
+        return false;
+      }
+    }
+    return false;
+  };
+
+  const handleDeleteUser = async (userId) => {
+    const userToDelete = listaUsuarios.find(u => u.id === userId);
+    if (!userToDelete) return;
+
+    if (window.confirm(`¿Estás seguro de eliminar al usuario "${userToDelete.nombre}"? Esta acción es PERMANENTE.`)) {
+      try {
+        await deleteDoc(doc(db, "usuarios", userId));
+        alert(`✅ Usuario "${userToDelete.nombre}" eliminado de la nube.`);
+      } catch (error) {
+        console.error("Error al eliminar usuario:", error);
+        alert("❌ Error al eliminar el usuario.");
+      }
+    }
   };
 
 
@@ -201,13 +342,67 @@ const manejarEnvioFormal = async (datosFiltrados = null) => {
 
   // --- EFECTO 1: Redirección Automática de Seguridad ---
   useEffect(() => {
-    if (usuarioLogueado?.rol === 'vendedor') {
-      if (pestanaActual === 'excel_local' || pestanaActual === 'registro') {
-        setPestanaActual('ventas');
-      }
-    }
+    if (!autenticado) return;
 
-  }, [usuarioLogueado, pestanaActual]);
+    const pestanasPermitidas = [];
+    if (tienePermiso(PERMISSIONS.VER_TABLA_GENERAL)) pestanasPermitidas.push('excel_interno');
+    if (tienePermiso(PERMISSIONS.VER_INFORMES)) pestanasPermitidas.push('informes');
+    if (tienePermiso(PERMISSIONS.VER_VENTAS)) pestanasPermitidas.push('ventas');
+    if (tienePermiso(PERMISSIONS.VER_ALMACEN)) pestanasPermitidas.push('almacen');
+    if (tienePermiso(PERMISSIONS.REGISTRAR)) pestanasPermitidas.push('registro');
+    if (tienePermiso(PERMISSIONS.GESTIONAR_USUARIOS)) pestanasPermitidas.push('gestion_usuarios');
+
+    // Si la pestaña actual no está en la lista de permitidas, redirige a la primera que sí lo esté.
+    if (!pestanasPermitidas.includes(pestanaActual)) {
+        setPestanaActual(pestanasPermitidas[0] || 'ventas');
+    }
+  }, [pestanaActual, autenticado, usuarioLogueado]);
+
+  // --- EFECTO NUEVO: Carga de configuración (usuarios y roles) desde Firestore ---
+  useEffect(() => {
+    // Suscripción a la colección de USUARIOS
+    const unsubUsuarios = onSnapshot(collection(db, "usuarios"), async (snapshot) => {
+      if (snapshot.empty) {
+        console.log("Colección 'usuarios' vacía. Sembrando datos iniciales...");
+        const batch = writeBatch(db);
+        initialUsers.forEach(user => {
+          const userRef = doc(collection(db, "usuarios")); // Firestore genera el ID
+          batch.set(userRef, user);
+        });
+        await batch.commit();
+        console.log("Usuarios iniciales sembrados en la nube.");
+      } else {
+        const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setListaUsuarios(usersData);
+      }
+    });
+
+    // Suscripción a la colección de ROLES
+    const unsubRoles = onSnapshot(collection(db, "roles"), async (snapshot) => {
+      if (snapshot.empty) {
+        console.log("Colección 'roles' vacía. Sembrando datos iniciales...");
+        const batch = writeBatch(db);
+        Object.entries(ROLES_PERMISSIONS).forEach(([roleName, permissions]) => {
+          const roleRef = doc(db, "roles", roleName);
+          batch.set(roleRef, { permissions });
+        });
+        await batch.commit();
+        console.log("Roles iniciales sembrados en la nube.");
+      } else {
+        const rolesData = {};
+        snapshot.docs.forEach(doc => {
+          rolesData[doc.id] = doc.data().permissions || [];
+        });
+        setRolesConPermisos(rolesData);
+      }
+      setConfigCargada(true); // Marcamos como cargado después de tener los roles
+    });
+
+    return () => {
+      unsubUsuarios();
+      unsubRoles();
+    };
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -291,7 +486,7 @@ const manejarGeneracionReporte = (formato, config = {}) => {
     mensaje += `*Ventas:* S/ ${ventaTotal.toFixed(2)}\n`;
     
     // Solo mostramos utilidad en WhatsApp si es el dueño (opcional, aquí lo incluimos)
-    if (usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.rol === 'admin_2') {
+    if (tienePermiso(PERMISSIONS.VER_FINANZAS)) {
       mensaje += `*Inversión:* S/ ${inversionTotal.toFixed(2)}\n`;
       mensaje += `*Ganancia Neta:* S/ ${utilidadNeta.toFixed(2)}\n`;
     }
@@ -531,7 +726,7 @@ if (!editandoId) {
 } else {
   // SI ESTAMOS EDITANDO:
   // Permitimos el cambio solo si el usuario tiene permisos de admin
-  if (usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.rol === 'admin_2') {
+  if (tienePermiso(PERMISSIONS.EDITAR_REGISTRO)) { // Asumimos que un editor puede reasignar
     // Si el admin eligió un responsable en el select, lo mantenemos. 
     // Si no, no tocamos nada.
     if (!form.responsable) {
@@ -724,9 +919,11 @@ const laptopsFiltradas = laptops.filter(lap => {
   if (filtroEstado !== 'TODOS' && estadoLap !== filtroEstado) return false;
 
   // 2. FILTRO POR ROL (SEGURIDAD DE LEONIDAS STORE)
-  const coincideVendedor = (usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.rol === 'admin_2' || usuarioLogueado?.rol === 'administrador_ventas')
+  // Si el usuario tiene permiso para ver todo el almacén, no se filtra por nombre.
+  const puedeVerTodo = tienePermiso(PERMISSIONS.VER_ALMACEN); 
+  const coincideVendedor = puedeVerTodo
     ? true
-    : (lap.vendedor === usuarioLogueado?.nombre || lap.responsable === usuarioLogueado?.nombre || lap.usuario === usuarioLogueado?.nombre);
+    : (lap.responsable === usuarioLogueado?.nombre);
   
   if (!coincideVendedor) return false;
 
@@ -777,7 +974,7 @@ const laptopsFiltradas = laptops.filter(lap => {
 let inversionTotal = 0;
 let utilidadTotal = 0;
 
-if (usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.rol === 'admin_2' || usuarioLogueado?.rol === 'administrador_ventas') {
+if (tienePermiso(PERMISSIONS.VER_FINANZAS)) {
   inversionTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.precio_costo) || 0), 0);
   utilidadTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.utilidad) || 0), 0);
 }
@@ -809,6 +1006,21 @@ const renderCampoMixto = (label, nombre, opciones) => {
   );
 };
 
+  // --- NUEVO: Pantalla de carga mientras se sincroniza con la nube ---
+  if (!configCargada) {
+    return (
+      <div id="login-root">
+        <div className="login-box" style={{textAlign: 'center'}}>
+          <img src={logoFinpro} className="login-avatar" alt="Logo Finpro" style={{objectFit: 'contain'}} />
+          <h2 className="login-title" style={{color: '#00ff7f'}}>SINCRONIZANDO...</h2>
+          <p style={{color: '#94a3b8', fontSize: '0.9rem'}}>
+            Conectando con la base de datos en la nube para obtener la configuración más reciente.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 if (!autenticado) {
     const verificarPin = () => {
       const PIN_MAESTRO = "4444"; // <--- CAMBIA TU PIN AQUÍ
@@ -829,19 +1041,39 @@ if (!autenticado) {
             e.preventDefault();
             const usuarioInput = userDigitado.toLowerCase().trim();
             const passInput = passDigitado.trim();
-            const encontrado = LISTA_USUARIOS.find(u => 
+            const encontrado = listaUsuarios.find(u => 
               u.user.toLowerCase() === usuarioInput && 
               u.pass === passInput
             );
 
             if (encontrado) {
-              // Si es super_admin, activamos el flujo del PIN
-              if (encontrado.rol === 'super_admin') {
-                setUsuarioPendiente(encontrado);
+              // NUEVO: Verificar si la cuenta está activa
+              if (!encontrado.activo) {
+                alert("❌ Tu cuenta ha sido desactivada. Contacta a un administrador.");
+                return;
+              }
+
+              // Asignar permisos al usuario encontrado
+              const permisosRol = rolesConPermisos[encontrado.rol] || [];
+              const overrides = encontrado.permissionOverrides || { add: [], remove: [] };
+              
+              // Aplicar excepciones:
+              // 1. Empezamos con los permisos del rol.
+              let permisosFinales = [...permisosRol];
+              // 2. Añadimos los permisos permitidos explícitamente (sin duplicados).
+              permisosFinales = [...new Set([...permisosFinales, ...overrides.add])];
+              // 3. Quitamos los permisos denegados explícitamente.
+              permisosFinales = permisosFinales.filter(p => !overrides.remove.includes(p));
+
+              const usuarioConPermisos = { ...encontrado, permissions: permisosFinales };
+
+              // Si el usuario tiene el permiso de PIN, activamos el flujo del PIN
+              if (permisosFinales.includes(PERMISSIONS.PIN_LOGIN)) {
+                setUsuarioPendiente(usuarioConPermisos);
                 setMostrarPin(true);
               } else {
                 // Si es cualquier otro rol, entra directo
-                setUsuarioLogueado(encontrado);
+                setUsuarioLogueado(usuarioConPermisos);
                 setAutenticado(true);
               }
             } else {
@@ -1290,6 +1522,7 @@ if (!autenticado) {
           pestanaActual={pestanaActual}
           setPestanaActual={setPestanaActual}
           handleLogout={handleLogout}
+          tienePermiso={tienePermiso} // Pasamos la función de chequeo
           cargando={cargando}
         />
       ) : (
@@ -1307,7 +1540,7 @@ if (!autenticado) {
               <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold', whiteSpace: 'nowrap' }}>FINPRO STORE</h1>
               <div className="user-info-display" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
   <span className="role-badge" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-    🛡️ {usuarioLogueado?.rol === 'administrador_ventas' ? 'ADMINISTRADOR' : usuarioLogueado?.rol.replace(/-/g, ' ').toUpperCase()}
+    🛡️ {usuarioLogueado?.rol.replace(/_/g, ' ').toUpperCase()}
   </span>
 </div>
             </div>
@@ -1317,20 +1550,29 @@ if (!autenticado) {
             <button className={pestanaActual === 'excel_interno' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('excel_interno')} style={{ border: '1px solid rgba(0, 255, 255, 0.4)', minWidth: '135px' }}>
               📊 Tabla General
             </button>
-            <button className={pestanaActual === 'informes' ? 'nav-btn btn-header-report active' : 'nav-btn btn-header-report'} onClick={() => setPestanaActual('informes')} disabled={cargando} style={{ border: '1px solid rgba(0, 255, 127, 0.5)', minWidth: '135px' }}>
-              {cargando ? '...' : '📧 INFORMES'}
-            </button>
-            <button className={pestanaActual === 'ventas' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('ventas')} style={{ border: '1px solid rgba(255, 193, 7, 0.4)', minWidth: '135px' }}>
-              💰 VENTAS
-            </button>
-            {usuarioLogueado?.rol !== 'vendedor' && (
+            {tienePermiso(PERMISSIONS.VER_INFORMES) && (
+              <button className={pestanaActual === 'informes' ? 'nav-btn btn-header-report active' : 'nav-btn btn-header-report'} onClick={() => setPestanaActual('informes')} disabled={cargando} style={{ border: '1px solid rgba(0, 255, 127, 0.5)', minWidth: '135px' }}>
+                {cargando ? '...' : '📧 INFORMES'}
+              </button>
+            )}
+            {tienePermiso(PERMISSIONS.VER_VENTAS) && (
+              <button className={pestanaActual === 'ventas' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('ventas')} style={{ border: '1px solid rgba(255, 193, 7, 0.4)', minWidth: '135px' }}>
+                💰 VENTAS
+              </button>
+            )}
+            {tienePermiso(PERMISSIONS.VER_ALMACEN) && (
               <button className={pestanaActual === 'almacen' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('almacen')} style={{ border: '1px solid rgba(0, 123, 255, 0.5)', minWidth: '135px' }}>
                 📖 ALMACÉN
               </button>
             )}
-            {usuarioLogueado?.rol !== 'vendedor' && (
+            {tienePermiso(PERMISSIONS.REGISTRAR) && (
               <button className={pestanaActual === 'registro' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('registro')} style={{ border: '1px solid rgba(138, 43, 226, 0.5)', minWidth: '135px' }}>
                 ➕ {editandoId ? 'EDITAR' : 'REGISTRAR'}
+              </button>
+            )}
+            {tienePermiso(PERMISSIONS.GESTIONAR_USUARIOS) && (
+              <button className={pestanaActual === 'gestion_usuarios' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('gestion_usuarios')} style={{ border: '1px solid rgba(255, 105, 180, 0.6)', minWidth: '135px' }}>
+                👤 CONFIGURACIONES
               </button>
             )}
           </nav>
@@ -1348,8 +1590,8 @@ if (!autenticado) {
         {pestanaActual === 'almacen' && (
           <div className="inventory-view fade-in">
             
-            {/* === BLOQUE DE TOTALES EXCLUSIVO PARA SUPER_ADMIN (DUEÑO) === */}
-            {usuarioLogueado?.rol === 'super_admin' && (
+            {/* === BLOQUE DE TOTALES (VISIBILIDAD POR PERMISO) === */}
+            {tienePermiso(PERMISSIONS.VER_FINANZAS) && (
               <div className="flex-mobile-stack" style={{ 
                 display: 'flex', 
                 justifyContent: 'space-around', 
@@ -1440,7 +1682,7 @@ if (!autenticado) {
                   onChange={(e) => setFechaConsulta(e.target.value)}
                 />
                 <button className="btn-show-all" onClick={manejarVerTodo}>📋 VER TODO</button>
-                {usuarioLogueado?.rol === 'super_admin' && (
+                {tienePermiso(PERMISSIONS.FORMATEAR_INVENTARIO) && (
                   <button
                     className="btn-show-all"
                     onClick={() => setMostrarModalFormateo(true)}
@@ -1477,6 +1719,7 @@ if (!autenticado) {
                 activarEdicion={activarEdicion} 
                 actualizarProducto={actualizarProducto}
                 usuarioLogueado={usuarioLogueado}
+                tienePermiso={tienePermiso}
                 busqueda={busqueda}
                 setModalImagen={(img) => {
                   setModalImagen(img);
@@ -1498,6 +1741,26 @@ if (!autenticado) {
           </div>
         )}
 
+        {/* PESTAÑA DE GESTIÓN DE USUARIOS */}
+        {pestanaActual === 'gestion_usuarios' && tienePermiso(PERMISSIONS.GESTIONAR_USUARIOS) && (
+          <PanelGestionUsuarios 
+            usuarios={listaUsuarios}
+            onToggleActivo={(userId, currentState) => handleToggleActivo(userId, currentState)}
+            usuarioLogueado={usuarioLogueado}
+            rolesConPermisos={rolesConPermisos}
+            allPermissions={PERMISSIONS}
+            onAddRole={handleAddRole}
+            onUpdateRolePermissions={handleUpdateRolePermissions}
+            onUpdateUserRole={handleUpdateUserRole}
+            onDeleteRole={handleDeleteRole}
+            onAddUser={handleCreateUser} // Pasamos la nueva función
+            onDeleteUser={handleDeleteUser}
+            tienePermiso={tienePermiso}
+            // --- NUEVO: Pasamos el manejador y datos para excepciones ---
+            onUpdateUserPermissionOverrides={handleUpdateUserPermissionOverrides}
+          />
+        )}
+
         {pestanaActual === 'ventas' && (
           <VentasView 
             laptops={laptops}
@@ -1507,9 +1770,10 @@ if (!autenticado) {
             usuarioLogueado={usuarioLogueado}
             setModalImagen={setModalImagen}
             setFotoActual={setFotoActual}
-            activarEdicion={activarEdicion}
-            eliminarProducto={manejarEliminar}
-            actualizarProducto={actualizarProducto}
+            activarEdicion={tienePermiso(PERMISSIONS.EDITAR_REGISTRO) ? activarEdicion : null}
+            manejarEliminar={tienePermiso(PERMISSIONS.ELIMINAR_REGISTRO) ? manejarEliminar : null}
+            actualizarProducto={actualizarProducto} // Se usa internamente, no requiere permiso aquí
+            tienePermiso={tienePermiso}
           />
         )}
 
@@ -1591,7 +1855,7 @@ if (!autenticado) {
                   onChange={(e) => setFechaFiltro(e.target.value)}
                 />
                 <button className="btn-show-all" onClick={manejarVerTodo}>📋 VER TODO</button>
-                {usuarioLogueado?.rol === 'super_admin' && (
+                {tienePermiso(PERMISSIONS.FORMATEAR_INVENTARIO) && (
                   <button
                     className="btn-show-all"
                     onClick={() => setMostrarModalFormateo(true)}
@@ -1627,6 +1891,7 @@ if (!autenticado) {
               fechaFiltro={fechaFiltro}
               setFechaFiltro={setFechaFiltro}
               eliminarProducto={manejarEliminar}
+              tienePermiso={tienePermiso}
             />
           </div>
         )}

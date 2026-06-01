@@ -14,7 +14,8 @@ const AlmacenTabla = ({
   onVenderClick, 
   modoVentas = false,
   laptopsSeleccionadas = [],
-  toggleSeleccion
+  toggleSeleccion,
+  tienePermiso // <-- NUEVA PROP
 }) => {
   // --- NUEVO ESTADO PARA FILTRAR POR VENDEDOR ---
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
@@ -26,20 +27,21 @@ const AlmacenTabla = ({
   const toggleDia = (dia) => {
     setDiasExpandidos(prev => ({ ...prev, [dia]: !prev[dia] }));
   };
+  
   const puedeEditar = (item) => {
-    return usuarioLogueado?.rol === 'super_admin';
+    // Un super_admin siempre puede. Para los demás, se verifica el permiso.
+    if (usuarioLogueado?.rol === 'super_admin') return true;
+    return tienePermiso && tienePermiso('EDITAR_REGISTRO');
   };
 
-  const laptopsVisibles = laptops.filter(lap => {
-    if (!lap) return false;
-    if (usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.rol === 'admin_2' || usuarioLogueado?.rol === 'administrador_ventas') {
-      return true;
-    }
-    return (lap.vendedor === usuarioLogueado?.nombre || lap.responsable === usuarioLogueado?.nombre);
-  });
+  const puedeEliminar = (item) => {
+    // Un super_admin siempre puede. Para los demás, se verifica el permiso.
+    if (usuarioLogueado?.rol === 'super_admin') return true;
+    return tienePermiso && tienePermiso('ELIMINAR_REGISTRO');
+  }
 
 // --- LÓGICA DE FILTRADO ACTUALIZADA (TEXTO + VENDEDOR + TIEMPO) ---
-  const laptopsFiltradas = laptopsVisibles.filter(l => {
+  const laptopsFiltradas = laptops.filter(l => {
     // 1. Filtro por Vendedor
     const nombreVendedor = (l.responsable || l.vendedor || "").toUpperCase();
     const pasaVendedor = filtroVendedor === "TODOS" || nombreVendedor.includes(filtroVendedor);
@@ -469,12 +471,12 @@ const obtenerMesYAnio = (fechaString) => {
                         cursor: (l.imagenes?.length > 0) ? 'pointer' : 'not-allowed',
                         background: 'transparent', border: 'none'
                       }}
-                    >{l.imagenes?.length > 0 ? '👁️' : '🚫'}</button>
+                    >{l.imagenes?.length > 0 ? '👁️' : '🚫'}</button>                    
                     {puedeEditar(l) && (
-                      <>
-                        <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => activarEdicion(l)}>✏️</button>
-                        <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => window.confirm(`¿Eliminar ${l.serial}?`) && eliminarProducto(l.fireId, l.serial)}>🗑️</button>
-                      </>
+                      <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => activarEdicion(l)}>✏️</button>
+                    )}
+                    {puedeEliminar(l) && (
+                      <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => window.confirm(`¿Eliminar ${l.serial}?`) && eliminarProducto(l.fireId, l.serial)}>🗑️</button>
                     )}
                   </div>
                 </td>

@@ -5,7 +5,8 @@ const MenuMobile = ({
   pestanaActual,
   setPestanaActual,
   handleLogout,
-  cargando
+  cargando,
+  tienePermiso // Nueva prop para verificar permisos
 }) => {
 
   const NavButton = ({ pestana, icono, texto }) => {
@@ -89,14 +90,17 @@ const MenuMobile = ({
         paddingBottom: 'env(safe-area-inset-bottom)',
         boxShadow: '0 -5px 20px rgba(0, 0, 0, 0.5)'
       }}>
-        <NavButton pestana="excel_interno" icono="📊" texto="General" />
-        <NavButton pestana="informes" icono="📧" texto="Informes" />
-        <NavButton pestana="ventas" icono="💰" texto="Ventas" />
-        {usuarioLogueado?.rol !== 'vendedor' && (
+        {tienePermiso('VER_TABLA_GENERAL') && <NavButton pestana="excel_interno" icono="📊" texto="General" />}
+        {tienePermiso('VER_INFORMES') && <NavButton pestana="informes" icono="📧" texto="Informes" />}
+        {tienePermiso('VER_VENTAS') && <NavButton pestana="ventas" icono="💰" texto="Ventas" />}
+        {tienePermiso('VER_ALMACEN') && (
           <NavButton pestana="almacen" icono="📖" texto="Almacén" />
         )}
-        {usuarioLogueado?.rol !== 'vendedor' && (
+        {tienePermiso('REGISTRAR') && (
           <NavButton pestana="registro" icono="➕" texto="Registrar" />
+        )}
+        {tienePermiso('GESTIONAR_USUARIOS') && (
+          <NavButton pestana="gestion_usuarios" icono="👤" texto="Admin" />
         )}
       </nav>
     </>

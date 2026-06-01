@@ -7,7 +7,8 @@ export const LISTA_USUARIOS = [
     rol: "super_admin", 
     nombre: "Leonidas", 
     // Reemplaza el texto por el link completo entre comillas
-    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=0#gid=0" 
+    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=0#gid=0",
+    activo: true
   },
   { 
     id: "U002", 
@@ -15,7 +16,8 @@ export const LISTA_USUARIOS = [
     pass: "yael2026", 
     rol: "admin_2", 
     nombre: "Yael", 
-    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=2111153932#gid=2111153932" 
+    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=2111153932#gid=2111153932",
+    activo: true
   },
   { 
     id: "U003", 
@@ -23,7 +25,8 @@ export const LISTA_USUARIOS = [
     pass: "cris2026", 
     rol: "admin_2", 
     nombre: "Cristofer", 
-    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=908058547#gid=908058547" 
+    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=908058547#gid=908058547",
+    activo: true
   },
   { 
     id: "U004", 
@@ -31,7 +34,8 @@ export const LISTA_USUARIOS = [
     pass: "david2026", 
     rol: "admin_2", 
     nombre: "David", 
-    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=170557204#gid=170557204" 
+    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit?gid=170557204#gid=170557204",
+    activo: true
   },
   { 
     id: "U005", 
@@ -39,7 +43,8 @@ export const LISTA_USUARIOS = [
     pass: "ventas123", 
     rol: "vendedor", 
     nombre: "Personal de Ventas", 
-    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit#gid=0" 
+    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit#gid=0",
+    activo: true
   },
   { 
     id: "U006", 
@@ -47,6 +52,7 @@ export const LISTA_USUARIOS = [
     pass: "262626", 
     rol: "administrador_ventas", 
     nombre: "Personal administrador", 
-    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit#gid=0" 
+    hoja: "https://docs.google.com/spreadsheets/d/1Ra3jKS2ynhlo_fdFYS6fm9R4gb0Dsk1xbxm1IY63sOQ/edit#gid=0",
+    activo: true
   }
 ];

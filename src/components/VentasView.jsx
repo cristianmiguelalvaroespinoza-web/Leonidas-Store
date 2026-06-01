@@ -14,7 +14,8 @@ const VentasView = ({
   setFotoActual, 
   activarEdicion, 
   manejarEliminar,
-  manejarGeneracionReporte
+  manejarGeneracionReporte,
+  tienePermiso // <-- NUEVA PROP
 }) => {
   const [cargando, setCargando] = useState(false); // Nuevo estado para controlar la carga
   const [busquedaVentas, setBusquedaVentas] = useState("");
@@ -190,7 +191,7 @@ const finalizarVentaLote = () => {
   return (
     <div className="ventas-view-container fade-in">
       <div className="section-header">
-        <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS - FINPRO STORE</h2>
+        <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
         
         <div className="header-controls-ventas mobile-stack">
           {/* Botón Ver Todo */}
@@ -236,6 +237,7 @@ const finalizarVentaLote = () => {
           laptopsSeleccionadas={laptopsSeleccionadas}
           toggleSeleccion={toggleSeleccion}
           modoVentas={true}
+          tienePermiso={tienePermiso} // <-- PASAR LA PROP
         />
       </div>
 
