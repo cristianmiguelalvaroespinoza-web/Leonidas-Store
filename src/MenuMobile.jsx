@@ -6,14 +6,16 @@ const MenuMobile = ({
   setPestanaActual,
   handleLogout,
   cargando,
-  tienePermiso // Nueva prop para verificar permisos
+  tienePermiso, // Nueva prop para verificar permisos
+  isEditing    // NUEVO: para bloquear la navegación
 }) => {
 
-  const NavButton = ({ pestana, icono, texto }) => {
+  const NavButton = ({ pestana, icono, texto, disabled }) => {
     const isActive = pestanaActual === pestana;
     return (
       <button
         onClick={() => setPestanaActual(pestana)}
+        disabled={disabled}
         style={{
           background: 'transparent',
           border: 'none',
@@ -25,7 +27,8 @@ const MenuMobile = ({
           gap: '4px',
           flex: 1,
           padding: '5px 0',
-          cursor: 'pointer',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled && !isActive ? 0.5 : 1,
           transition: 'color 0.2s ease',
         }}
       >
@@ -90,17 +93,17 @@ const MenuMobile = ({
         paddingBottom: 'env(safe-area-inset-bottom)',
         boxShadow: '0 -5px 20px rgba(0, 0, 0, 0.5)'
       }}>
-        {tienePermiso('VER_TABLA_GENERAL') && <NavButton pestana="excel_interno" icono="📊" texto="General" />}
-        {tienePermiso('VER_INFORMES') && <NavButton pestana="informes" icono="📧" texto="Informes" />}
-        {tienePermiso('VER_VENTAS') && <NavButton pestana="ventas" icono="💰" texto="Ventas" />}
+        {tienePermiso('VER_TABLA_GENERAL') && <NavButton pestana="excel_interno" icono="📊" texto="General" disabled={isEditing} />}
+        {tienePermiso('VER_INFORMES') && <NavButton pestana="informes" icono="📧" texto="Informes" disabled={isEditing} />}
+        {tienePermiso('VER_VENTAS') && <NavButton pestana="ventas" icono="💰" texto="Ventas" disabled={isEditing} />}
         {tienePermiso('VER_ALMACEN') && (
-          <NavButton pestana="almacen" icono="📖" texto="Almacén" />
+          <NavButton pestana="almacen" icono="📖" texto="Almacén" disabled={isEditing} />
         )}
         {tienePermiso('REGISTRAR') && (
-          <NavButton pestana="registro" icono="➕" texto="Registrar" />
+          <NavButton pestana="registro" icono="➕" texto={isEditing ? 'Editando' : 'Registrar'} disabled={isEditing} />
         )}
         {tienePermiso('GESTIONAR_USUARIOS') && (
-          <NavButton pestana="gestion_usuarios" icono="👤" texto="Admin" />
+          <NavButton pestana="gestion_usuarios" icono="👤" texto="Admin" disabled={isEditing} />
         )}
       </nav>
     </>

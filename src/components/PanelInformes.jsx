@@ -762,7 +762,6 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
             <div className={styles.modalHeader}>
               <h2 className={styles.modalHeaderTitle}><Package size={28} /> STOCK ACTUAL EN TIENDA</h2>
               <p className={styles.modalHeaderSub}>Lista detallada de las {laptopsEnStock.length} laptops disponibles</p>
-              <button className={styles.btnCloseTop} onClick={() => setMostrarModalStock(false)}><X /></button>
             </div>
             <div className={styles.gridDetalleTecnico} style={{ maxHeight: '60vh', overflowY: 'auto', padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
               {laptopsEnStock.map((l, i) => (
@@ -820,7 +819,6 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
             <div className={styles.modalHeader}>
               <h2 className={styles.modalHeaderTitle}><ShoppingCart size={28} /> HISTÓRICO DE VENTAS</h2>
               <p className={styles.modalHeaderSub}>Total de {laptopsVendidasHistorico.length} equipos vendidos</p>
-              <button className={styles.btnCloseTop} onClick={() => setMostrarModalVendidos(false)}><X /></button>
             </div>
             <div className={styles.ventasList} style={{ maxHeight: '60vh', overflowY: 'auto' }}>
               {laptopsVendidasHistorico.map((l, i) => (

@@ -1524,6 +1524,7 @@ if (!autenticado) {
           handleLogout={handleLogout}
           tienePermiso={tienePermiso} // Pasamos la función de chequeo
           cargando={cargando}
+          isEditing={editandoId !== null}
         />
       ) : (
         <header className="blue-nav">
@@ -1546,7 +1547,7 @@ if (!autenticado) {
             </div>
           </div>
           {/* BLOQUE CENTRAL: Navegación (Menú colapsable en móvil) */}
-          <nav className="nav-actions">
+          <nav className="nav-actions" style={{ transition: 'opacity 0.3s', pointerEvents: editandoId !== null ? 'none' : 'auto', opacity: editandoId !== null ? 0.5 : 1 }}>
             <button className={pestanaActual === 'excel_interno' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('excel_interno')} style={{ border: '1px solid rgba(0, 255, 255, 0.4)', minWidth: '135px', '--color-activo': '#10b981' }}>
               📊 Tabla General
             </button>
