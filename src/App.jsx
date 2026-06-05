@@ -51,8 +51,8 @@ function App() {
   // Añade este estado al inicio de tu componente
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [navScrollIndex, setNavScrollIndex] = useState(0);
-  const [navOffset, setNavOffset] = useState(0); // NUEVO: Estado para el desplazamiento en píxeles
-  const navContainerRef = useRef(null); // NUEVO: Ref para el contenedor de la navegación
+  const [navOffset, setNavOffset] = useState(0);
+  const navContainerRef = useRef(null);
   const [mostrarModalInformes, setMostrarModalInformes] = useState(false);
   const [indiceEscaneo, setIndiceEscaneo] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -980,6 +980,16 @@ const laptopsFiltradas = laptops.filter(lap => {
   return true; 
 });
 
+// --- CÁLCULO DE TOTALES (SOLO ADMINS) ---
+// Estos cálculos se ejecutan sobre el resultado ya filtrado
+let inversionTotal = 0;
+let utilidadTotal = 0;
+
+if (tienePermiso(PERMISSIONS.VER_FINANZAS)) {
+  inversionTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.precio_costo) || 0), 0);
+  utilidadTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.utilidad) || 0), 0);
+}
+
 // --- Lógica para el menú de navegación desplazable ---
   const navItems = useMemo(() => {
     const items = [];
@@ -1004,54 +1014,6 @@ const laptopsFiltradas = laptops.filter(lap => {
     }
     return items;
   }, [tienePermiso, cargando, editandoId]);
-
-  const ITEMS_PER_VIEW = 4;
-  const canScroll = navItems.length > ITEMS_PER_VIEW;
-  const maxScrollIndex = canScroll ? navItems.length - ITEMS_PER_VIEW : 0; // Se mantiene para saber el límite
-
-  // Cuando el número de items cambia (e.g. login con otro usuario), reseteamos el scroll.
-  useEffect(() => {
-    setNavScrollIndex(0);
-  }, [navItems.length]);
-
-  // --- NUEVO: Efecto para calcular el desplazamiento en píxeles ---
-  useEffect(() => {
-    if (!navContainerRef.current || !canScroll) {
-      setNavOffset(0);
-      return;
-    }
-
-    const buttons = Array.from(navContainerRef.current.children);
-    let offset = 0;
-    const gap = 12; // El 'gap' definido en App.css para .nav-actions
-
-    // Sumamos el ancho de los botones que deben quedar fuera de la vista
-    for (let i = 0; i < navScrollIndex; i++) {
-      if (buttons[i]) {
-        offset += buttons[i].offsetWidth + gap;
-      }
-    }
-    setNavOffset(offset);
-  }, [navScrollIndex, navItems, canScroll]); // Se recalcula si cambia el índice o los items
-
-  const handleNavScroll = (direction) => {
-    if (direction === 'right') {
-      setNavScrollIndex(prev => Math.min(prev + 1, maxScrollIndex));
-    } else {
-      setNavScrollIndex(prev => Math.max(0, prev - 1));
-    }
-  };
-  // --- Fin de la lógica de navegación ---
-
-// --- NUEVOS CAMBIOS PASO 2: CÁLCULO DE TOTALES (SOLO ADMINS) ---
-// Estos cálculos se ejecutan sobre el resultado ya filtrado
-let inversionTotal = 0;
-let utilidadTotal = 0;
-
-if (tienePermiso(PERMISSIONS.VER_FINANZAS)) {
-  inversionTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.precio_costo) || 0), 0);
-  utilidadTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.utilidad) || 0), 0);
-}
 
 const renderCampoMixto = (label, nombre, opciones) => {
   const esOtro = mostrarManual[nombre];
@@ -1079,6 +1041,40 @@ const renderCampoMixto = (label, nombre, opciones) => {
     </div>
   );
 };
+
+  // --- Lógica de Navegación Unificada con Scroll ---
+  const ITEMS_PER_VIEW = 4; // Se muestran 4 botones principales
+  const canScroll = navItems.length > ITEMS_PER_VIEW;
+  const maxScrollIndex = canScroll ? navItems.length - ITEMS_PER_VIEW : 0;
+
+  // Resetear el scroll al cerrar el panel o si cambian los items
+  useEffect(() => {
+    setNavScrollIndex(0);
+  }, [navItems.length]);
+
+  // Calcular el desplazamiento en píxeles para la animación
+  useEffect(() => {
+    if (!navContainerRef.current || !canScroll) {
+      setNavOffset(0);
+      return;
+    }
+    const buttons = Array.from(navContainerRef.current.children);
+    let offset = 0;
+    const gap = 12; // Corresponde al 'gap' en .nav-actions
+    for (let i = 0; i < navScrollIndex; i++) {
+      if (buttons[i]) {
+        offset += buttons[i].offsetWidth + gap;
+      }
+    }
+    setNavOffset(offset);
+  }, [navScrollIndex, navItems, canScroll]);
+
+  const handleNavScroll = (direction) => {
+    setNavScrollIndex(prev => {
+      const next = direction === 'right' ? prev + 1 : prev - 1;
+      return Math.max(0, Math.min(next, maxScrollIndex));
+    });
+  };
 
   // --- NUEVO: Pantalla de carga mientras se sincroniza con la nube ---
   if (!configCargada) {
@@ -1621,59 +1617,43 @@ if (!autenticado) {
 </div>
             </div>
           </div>
-          
-          {/* --- ESTRUCTURA DE NAVEGACIÓN REORDENADA --- */}
-          {canScroll && (
-            <button 
-              className="nav-arrow" 
-              onClick={() => handleNavScroll('left')} 
-              disabled={navScrollIndex === 0}
-            >
-              <ChevronLeft size={20} />
-            </button>
-          )}
 
-          <div className="nav-actions-wrapper">
-            <nav 
-              ref={navContainerRef}
-              className="nav-actions" 
-              style={{ 
-                transform: `translateX(-${navOffset}px)`, // Usamos el offset dinámico
-                transition: 'transform 0.4s ease-in-out',
-                pointerEvents: editandoId !== null ? 'none' : 'auto', 
-                opacity: editandoId !== null ? 0.5 : 1
-              }}
-            >
-              {navItems.map(item => (
-                <button 
-                  key={item.pestana}
-                  className={`${pestanaActual === item.pestana ? 'nav-btn active' : 'nav-btn'} ${item.className || ''}`} 
-                  onClick={() => setPestanaActual(item.pestana)} 
-                  disabled={cargando && item.pestana === 'informes'}
-                  style={item.style}
-                >
-                  {item.texto}
-                </button>
-              ))}
-            </nav>
+          {/* BLOQUE CENTRAL: Navegación Unificada con Scroll */}
+          <div className="nav-center-container">
+            {canScroll && (
+              <button className="nav-arrow" onClick={() => handleNavScroll('left')} disabled={navScrollIndex === 0}>
+                <ChevronLeft size={20} />
+              </button>
+            )}
+            <div className="nav-actions-wrapper">
+              <nav 
+                ref={navContainerRef} 
+                className="nav-actions"
+                style={{
+                  transform: `translateX(-${navOffset}px)`,
+                  transition: 'transform 0.4s ease-in-out'
+                }}
+              >
+                {navItems.map(item => (
+                  <button key={item.pestana} className={`${pestanaActual === item.pestana ? 'nav-btn active' : 'nav-btn'} ${item.className || ''}`} onClick={() => setPestanaActual(item.pestana)} style={item.style}>
+                    {item.texto}
+                  </button>
+                ))}
+              </nav>
+            </div>
+            {canScroll && (
+              <button className="nav-arrow" onClick={() => handleNavScroll('right')} disabled={navScrollIndex >= maxScrollIndex}>
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
 
-          {canScroll && (
-            <button 
-              className="nav-arrow" 
-              onClick={() => handleNavScroll('right')} 
-              disabled={navScrollIndex >= maxScrollIndex}
-            >
-              <ChevronRight size={20} />
-            </button>
-          )}
-
-          {/* BLOQUE DERECHA: Salida (SOLO ESCRITORIO) */}
-          <div className="exit-section">
-            <button className="btn-exit" onClick={handleLogout} style={{ border: '1px solid rgba(239, 68, 68, 0.6)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)', padding: '8px 15px', fontWeight: 'bold' }}>
-              🚪 SALIR
-            </button>
-          </div>
+            {/* Botón de Salida */}
+            <div className="exit-section">
+              <button className="btn-exit" onClick={handleLogout} style={{ border: '1px solid rgba(239, 68, 68, 0.6)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)', padding: '8px 15px', fontWeight: 'bold' }}>
+                🚪 SALIR
+              </button>
+            </div>
         </header>
       )}
 
