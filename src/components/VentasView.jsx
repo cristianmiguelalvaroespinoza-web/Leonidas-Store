@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AlmacenTabla from './AlmacenTabla';
 import { X, Printer, User, MapPin, CheckCircle, FileText, CalendarDays, Search, RotateCcw } from 'lucide-react'; 
 import './VentasView.css';
@@ -17,19 +17,23 @@ const VentasView = ({
   manejarGeneracionReporte,
   tienePermiso // <-- NUEVA PROP
 }) => {
-  const [cargando, setCargando] = useState(false); // Nuevo estado para controlar la carga
+  const [cargando, setCargando] = useState(false); 
   const [busquedaVentas, setBusquedaVentas] = useState("");
-  const [filtroFecha, setFiltroFecha] = useState(""); // Nuevo estado para calendario
+  const [filtroFecha, setFiltroFecha] = useState(""); 
   const [laptopsSeleccionadas, setLaptopsSeleccionadas] = useState([]);
-  const [equipoDetalle, setEquipoDetalle] = useState(null); // Inicializar equipoDetalle
+  const [equipoDetalle, setEquipoDetalle] = useState(null); 
   const [mostrarInforme, setMostrarInforme] = useState(false);
   const [modoVenta, setModoVenta] = useState(false); 
   const [nombreCliente, setNombreCliente] = useState("");
   const [destinoVenta, setDestinoVenta] = useState("LIMA");
+  
+  // --- NUEVOS ESTADOS PARA EL PANEL DE DESPACHO ---
+  const [cargandoDespacho, setCargandoDespacho] = useState(null); 
+  const [destinosDespacho, setDestinosDespacho] = useState({}); 
 
   const manejarVentaProxima = (laptop) => {
     setEquipoDetalle(laptop);
-    setLaptopsSeleccionadas([]); // Limpiar selección masiva al iniciar venta individual
+    setLaptopsSeleccionadas([]); 
     setMostrarInforme(true);
     setModoVenta(false); 
     setNombreCliente("");
@@ -42,18 +46,18 @@ const VentasView = ({
   };
 
   // Para alternar la selección de un equipo
-const toggleSeleccion = (laptop) => {
-  if (laptopsSeleccionadas.find(l => l.fireId === laptop.fireId)) {
-    setLaptopsSeleccionadas(laptopsSeleccionadas.filter(l => l.fireId !== laptop.fireId));
-  } else {
-    setLaptopsSeleccionadas([...laptopsSeleccionadas, laptop]);
-  }
-};
+  const toggleSeleccion = (laptop) => {
+    if (laptopsSeleccionadas.find(l => l.fireId === laptop.fireId)) {
+      setLaptopsSeleccionadas(laptopsSeleccionadas.filter(l => l.fireId !== laptop.fireId));
+    } else {
+      setLaptopsSeleccionadas([...laptopsSeleccionadas, laptop]);
+    }
+  };
 
-// Venta masiva
-const finalizarVentaLote = () => {
-  setMostrarInforme(true); // Solo abre el modal, la lógica de venta se maneja en finalizarVentaYActualizar
-};
+  // Venta masiva
+  const finalizarVentaLote = () => {
+    setMostrarInforme(true); 
+  };
 
   const descargarPDF = async () => {
     const elemento = document.querySelector(".contenedor-boleta-formal");
@@ -98,82 +102,103 @@ const finalizarVentaLote = () => {
     }
   };
 
- const finalizarVentaYActualizar = async () => {
-  if (!nombreCliente.trim()) {
-    alert("Por favor, ingresa el nombre del cliente.");
-    return;
-  }
+  const finalizarVentaYActualizar = async () => {
+    if (!nombreCliente.trim()) {
+      alert("Por favor, ingresa el nombre del cliente.");
+      return;
+    }
 
-  // Determinar si es una venta individual o masiva
-  const isIndividualSale = equipoDetalle !== null && laptopsSeleccionadas.length === 0;
-  const listaVenta = isIndividualSale ? [equipoDetalle] : laptopsSeleccionadas;
+    const isIndividualSale = equipoDetalle !== null && laptopsSeleccionadas.length === 0;
+    const listaVenta = isIndividualSale ? [equipoDetalle] : laptopsSeleccionadas;
 
-  if (listaVenta.length === 0) {
-    alert("Error: No se seleccionó ningún equipo para la venta.");
-    return;
-  }
+    if (listaVenta.length === 0) {
+      alert("Error: No se seleccionó ningún equipo para la venta.");
+      return;
+    }
 
-  // Generar el PDF para la venta (sea individual o masiva)
-  await descargarPDF();
+    await descargarPDF();
 
-  try {
-    setCargando(true); // Asumimos que tienes un estado de cargando
+    try {
+      setCargando(true); 
 
-    // 3. Actualizamos cada equipo en Firebase usando un bucle con Promise.all
-    await Promise.all(listaVenta.map(async (laptop) => {
-      const laptopId = laptop.fireId || laptop.id;
-      if (!laptopId) throw new Error("ID de equipo no encontrado.");
+      await Promise.all(listaVenta.map(async (laptop) => {
+        const laptopId = laptop.fireId || laptop.id;
+        if (!laptopId) throw new Error("ID de equipo no encontrado.");
 
-      const equipoRef = doc(db, "inventario", laptopId.trim());
+        const equipoRef = doc(db, "inventario", laptopId.trim());
+        
+        return updateDoc(equipoRef, {
+          estado: "VENDIDO",
+          cliente: nombreCliente.toUpperCase(),
+          fecha_venta: new Date().toLocaleDateString('es-PE'), 
+          destino: destinoVenta.toUpperCase(),
+          vendedor_final: usuarioLogueado?.nombre || "Sistema", 
+          responsable_venta: usuarioLogueado?.nombre || "Sin asignar", 
+          estado_despacho: 'PENDIENTE' 
+        });
+      }));
+
+      alert(`¡Venta registrada! ${listaVenta.length} equipo(s) ya no aparecerán en stock.`);
       
-      return updateDoc(equipoRef, {
-        estado: "Vendido",
-        cliente: nombreCliente.toUpperCase(),
-        fecha_venta: new Date().toLocaleDateString('es-PE'), // Usar formato es-PE
-        destino: destinoVenta.toUpperCase(),
-        vendedor_final: usuarioLogueado?.nombre || "Sistema", // Para tracking
-        responsable_venta: usuarioLogueado?.nombre || "Sin asignar" // Para tracking
-      });
-    }));
+      setMostrarInforme(false);
+      setEquipoDetalle(null); 
+      setLaptopsSeleccionadas([]); 
+      setModoVenta(false);
+      setNombreCliente("");
+      setDestinoVenta("LIMA");
 
-    alert(`¡Venta registrada! ${listaVenta.length} equipo(s) ya no aparecerán en stock.`);
-    
-    // 4. Limpieza de estados
-    setMostrarInforme(false);
-    setEquipoDetalle(null); // Limpiar selección individual
-    setLaptopsSeleccionadas([]); // Limpiamos la selección masiva
-    setModoVenta(false);
-    setNombreCliente("");
-    setDestinoVenta("LIMA");
+    } catch (error) {
+      console.error("Error al actualizar:", error);
+      alert("Falló la conexión con la base de datos: " + error.message);
+    } finally {
+      setCargando(false);
+    }
+  };
 
-  } catch (error) {
-    console.error("Error al actualizar:", error);
-    alert("Falló la conexión con la base de datos: " + error.message);
-  } finally {
-    setCargando(false);
-  }
-};
+  const manejarDespacho = async (laptop) => {
+    const laptopId = laptop.fireId || laptop.id;
+    const nuevoDestino = destinosDespacho[laptopId];
+
+    if (!nuevoDestino || !nuevoDestino.trim()) {
+        alert("Por favor, ingrese un destino para despachar.");
+        return;
+    }
+
+    setCargandoDespacho(laptopId);
+    try {
+        const equipoRef = doc(db, "inventario", laptopId.trim());
+        await updateDoc(equipoRef, {
+            destino: nuevoDestino.toUpperCase(),
+            estado_despacho: 'DESPACHADO',
+            fecha_despacho: new Date().toLocaleDateString('es-PE'),
+            responsable_despacho: usuarioLogueado?.nombre
+        });
+        alert(`Equipo ${laptop.serial} despachado a ${nuevoDestino.toUpperCase()}.`);
+    } catch (error) {
+        console.error("Error al despachar:", error);
+        alert("Falló la conexión con la base de datos al intentar despachar: " + error.message);
+    } finally {
+        setCargandoDespacho(null);
+    }
+  };
   
   const ventasFiltradas = laptops.filter(lap => {
-  const estaEnStock = (lap.estado || "STOCK").toUpperCase() === 'STOCK';
-  const tienePrecioValido = lap.precio && Number(lap.precio) > 0;
-  
- if (!estaEnStock) return false;
+    const estaEnStock = (lap.estado || "STOCK").toUpperCase() === 'STOCK';
+    const tienePrecioValido = lap.precio && Number(lap.precio) > 0;
+    
+    if (!estaEnStock) return false;
 
-  // FILTRO DE CALENDARIO CORREGIDO
-  if (filtroFecha) {
-    const [year, month, day] = filtroFecha.split('-');
-    const f1 = `${parseInt(day)}/${parseInt(month)}/${year}`;
-    const f2 = `${day}/${month}/${year}`;
+    if (filtroFecha) {
+      const [year, month, day] = filtroFecha.split('-');
+      const f1 = `${parseInt(day)}/${parseInt(month)}/${year}`;
+      const f2 = `${day}/${month}/${year}`;
 
-    // REVISA AQUÍ: ¿Se llama fecha o fechaIngreso en tu base de datos?
-    // Si usaste la "función interesante" de 2 fechas, usa el nombre de la fecha de entrada.
-    const fechaParaFiltrar = lap.fechaIngreso || lap.fecha; 
+      const fechaParaFiltrar = lap.fechaIngreso || lap.fecha; 
 
-    if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
-      return false;
+      if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
+        return false;
+      }
     }
-  }
     const texto = busquedaVentas.toLowerCase();
     
     return (
@@ -181,12 +206,19 @@ const finalizarVentaLote = () => {
       lap.modelo?.toLowerCase().includes(texto) ||
       lap.procesador?.toLowerCase().includes(texto) ||
       lap.ram?.toLowerCase().includes(texto) ||
-      lap.disco?.toLowerCase().includes(texto) || // Ahora busca por SSD/HDD
+      lap.disco?.toLowerCase().includes(texto) || 
       lap.gpu?.toLowerCase().includes(texto) ||
       lap.serial?.toLowerCase().includes(texto) ||
       lap.id?.toLowerCase().includes(texto)
     );
   });
+
+  const laptopsParaDespacho = useMemo(() => 
+    laptops.filter(l => 
+      l.estado?.toUpperCase() === 'VENDIDO' && 
+      (l.estado_despacho === 'PENDIENTE' || !l.estado_despacho)
+    )
+  , [laptops]);
 
   return (
     <div className="ventas-view-container fade-in">
@@ -194,12 +226,10 @@ const finalizarVentaLote = () => {
         <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
         
         <div className="header-controls-ventas mobile-stack">
-          {/* Botón Ver Todo */}
           <button className="btn-ver-todo-ventas" onClick={limpiarFiltros}>
             <RotateCcw size={16} /> Ver Todo
           </button>
 
-          {/* Calendario */}
           <div className="calendar-box-ventas">
             <input 
               type="date" 
@@ -209,20 +239,18 @@ const finalizarVentaLote = () => {
             />
           </div>
 
-        {/* Buscador Corregido */}
-    <div className="search-box-ventas">
-      {/* Condición: Solo muestra el ícono si no hay nada escrito */}
-      {busquedaVentas === "" && (
-        <Search size={18} className="search-icon" />
-      )}
-      <input
-        type="text"
-        placeholder="Buscar laptop..."
-        value={busquedaVentas}
-        onChange={(e) => setBusquedaVentas(e.target.value)}
-        className={`input-busqueda-ventas ${busquedaVentas === "" ? "con-lupa" : "sin-lupa"}`}
-      />
-    </div>
+          <div className="search-box-ventas">
+            {busquedaVentas === "" && (
+              <Search size={18} className="search-icon" />
+            )}
+            <input
+              type="text"
+              placeholder="Buscar laptop..."
+              value={busquedaVentas}
+              onChange={(e) => setBusquedaVentas(e.target.value)}
+              className={`input-busqueda-ventas ${busquedaVentas === "" ? "con-lupa" : "sin-lupa"}`}
+            />
+          </div>
         </div>
       </div>
 
@@ -237,33 +265,121 @@ const finalizarVentaLote = () => {
           laptopsSeleccionadas={laptopsSeleccionadas}
           toggleSeleccion={toggleSeleccion}
           modoVentas={true}
-          tienePermiso={tienePermiso} // <-- PASAR LA PROP
+          tienePermiso={tienePermiso} 
         />
       </div>
 
       {laptopsSeleccionadas.length > 0 && (
-  <div className="bar-multiventa mobile-stack" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <span style={{ color: '#fff' }}>
-      Has seleccionado <b>{laptopsSeleccionadas.length}</b> equipos.
-    </span>
-    <div style={{ display: 'flex', gap: '10px' }}>
-      <button 
-        className="btn-vender-masivo" 
-        onClick={() => setMostrarInforme(true)} // Esto abre tu modal de venta actual
-        style={{ background: '#00ff7f', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-      >
-        💰 VENDER LOTE
-      </button>
-      <button 
-        className="btn-cancelar-lote"
-        onClick={() => setLaptopsSeleccionadas([])}
-        style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-      >
-        CANCELAR
-      </button>
-    </div>
-  </div>
-)}
+        <div className="bar-multiventa mobile-stack" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#fff' }}>
+            Has seleccionado <b>{laptopsSeleccionadas.length}</b> equipos.
+          </span>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              className="btn-vender-masivo" 
+              onClick={() => setMostrarInforme(true)} 
+              style={{ background: '#00ff7f', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              💰 VENDER LOTE
+            </button>
+            <button 
+              className="btn-cancelar-lote"
+              onClick={() => setLaptopsSeleccionadas([])}
+              style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              CANCELAR
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================================== */}
+      {/* NUEVA SECCIÓN DE DESPACHO     */}
+      {/* ================================== */}
+      {/* MODO PRUEBA: Cambiado a "true &&" para que SIEMPRE sea visible en pantalla y puedas probarlo */}
+      {true && (
+        <div className="dispatch-section" style={{ marginTop: '40px', background: '#0f172a', padding: '20px', borderRadius: '8px', border: '1px solid #334155' }}>
+          <h2 style={{ color: '#fff', borderBottom: '1px solid #334155', paddingBottom: '15px', marginBottom: '20px' }}>
+            🚚 Panel de Despachos Pendientes ({laptopsParaDespacho.length})
+          </h2>
+          <div className="table-wrapper-global">
+            <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155', textAlign: 'left' }}>
+                  <th style={{ padding: '10px', color: '#94a3b8' }}>Fecha Venta</th>
+                  <th style={{ padding: '10px', color: '#94a3b8' }}>Cliente</th>
+                  <th style={{ padding: '10px', color: '#94a3b8' }}>Equipo</th>
+                  <th style={{ padding: '10px', color: '#94a3b8' }}>Destino Actual</th>
+                  <th style={{ padding: '10px', color: '#94a3b8', width: '200px' }}>Nuevo Destino</th>
+                  <th style={{ padding: '10px', color: '#94a3b8', textAlign: 'center' }}>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {laptopsParaDespacho.length > 0 ? (
+                  laptopsParaDespacho.map(laptop => (
+                    <tr key={laptop.fireId} className="row-hover-simple">
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.fecha_venta}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.cliente}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>
+                        {laptop.marca} {laptop.modelo}
+                        <br />
+                        <small style={{ color: '#94a3b8' }}>S/N: {laptop.serial}</small>
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.destino}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>
+                        <input
+                          type="text"
+                          placeholder="Ciudad o provincia..."
+                          value={destinosDespacho[laptop.fireId] || ''}
+                          onChange={(e) => {
+                            const { value } = e.target;
+                            setDestinosDespacho(prev => ({
+                              ...prev,
+                              [laptop.fireId]: value
+                            }));
+                          }}
+                          style={{
+                            width: '100%',
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            color: 'white',
+                            borderRadius: '4px',
+                            padding: '8px'
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b', textAlign: 'center' }}>
+                        <button
+                          onClick={() => manejarDespacho(laptop)}
+                          disabled={cargandoDespacho === laptop.fireId}
+                          style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 15px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {cargandoDespacho === laptop.fireId ? 'Enviando...' : 'Despachar'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                      No hay equipos pendientes de despacho. <br/>
+                      <small>(Nota: Si acabas de vender un equipo y no aparece aquí, es porque la vista principal no está enviando los equipos en estado "VENDIDO" a esta sección).</small>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {mostrarInforme && (equipoDetalle || laptopsSeleccionadas.length > 0) && (
         <div className="overlay-informe-leonidas">
@@ -317,7 +433,6 @@ const finalizarVentaLote = () => {
     </tr>
   </thead>
   <tbody>
-    {/* Usamos el array de seleccionadas si existe, si no, convertimos el equipo individual a array */}
     {(laptopsSeleccionadas.length > 0 ? laptopsSeleccionadas : [equipoDetalle].filter(Boolean)).map((item, index) => (
       <tr key={item.fireId || index} style={{ borderBottom: '1px solid #334155' }}>
         <td style={{ color: 'white', padding: '6px 10px' }}>1</td>
@@ -331,7 +446,6 @@ const finalizarVentaLote = () => {
   </tbody>
 </table>
 
-{/* TOTAL A PAGAR (Único) */}
 {(() => {
   const totalAPagar = laptopsSeleccionadas.length > 0 
     ? laptopsSeleccionadas.reduce((sum, l) => sum + (Number(l.precio) || 0), 0)

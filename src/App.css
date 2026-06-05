@@ -157,8 +157,9 @@ body {
 .blue-nav {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 40px; /* Un poco más de aire a los lados */
+    /* justify-content: space-between; */ /* Cambiamos a gap para control manual */
+    gap: 15px; /* Espacio entre todos los elementos del header */
+    padding: 0 20px; /* Reducimos padding para que los elementos se acerquen a los bordes */
     background: rgba(15, 23, 42, 0.9); /* Transparencia sutil */
     backdrop-filter: blur(12px); /* Efecto cristal */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -173,8 +174,8 @@ body {
 .brand-section {
     display: flex;
     align-items: center;
-    gap: 16px;
-    flex: 1;
+    gap: 16px; /* Se quita flex:1 para que no ocupe espacio extra */
+    /* flex: 1; */
 }
 
 .nav-logo {
@@ -327,6 +328,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0; /* Evita que los botones se aplasten */
     /* Estado 'apagado' por defecto para botones inactivos */
     opacity: 0.7;
 }
@@ -357,7 +359,7 @@ body {
 .exit-section {
     display: flex;
     justify-content: flex-end;
-    flex: 1;
+    /* flex: 1; */ /* Se quita flex:1 para que no ocupe espacio extra */
 }
 
 /* Rediseño del Botón de Salir */

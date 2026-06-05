@@ -1,8 +1,9 @@
 
-import { User, Lock, Eye, EyeOff, Menu, X } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 // --- NUEVO: Imports de Firebase para la base de datos en la nube ---
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './App.css';
+import DespachosView from './components/DespachosView';
 import AlmacenTabla from './components/AlmacenTabla';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import VentasView from './components/VentasView';
@@ -49,6 +50,9 @@ const obtenerMesYAnio = (fechaString) => {
 function App() {
   // Añade este estado al inicio de tu componente
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
+  const [navScrollIndex, setNavScrollIndex] = useState(0);
+  const [navOffset, setNavOffset] = useState(0); // NUEVO: Estado para el desplazamiento en píxeles
+  const navContainerRef = useRef(null); // NUEVO: Ref para el contenedor de la navegación
   const [mostrarModalInformes, setMostrarModalInformes] = useState(false);
   const [indiceEscaneo, setIndiceEscaneo] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -348,6 +352,7 @@ const manejarEnvioFormal = async (datosFiltrados = null) => {
     if (tienePermiso(PERMISSIONS.VER_TABLA_GENERAL)) pestanasPermitidas.push('excel_interno');
     if (tienePermiso(PERMISSIONS.VER_INFORMES)) pestanasPermitidas.push('informes');
     if (tienePermiso(PERMISSIONS.VER_VENTAS)) pestanasPermitidas.push('ventas');
+    pestanasPermitidas.push('despachos');
     if (tienePermiso(PERMISSIONS.VER_ALMACEN)) pestanasPermitidas.push('almacen');
     if (tienePermiso(PERMISSIONS.REGISTRAR)) pestanasPermitidas.push('registro');
     if (tienePermiso(PERMISSIONS.GESTIONAR_USUARIOS)) pestanasPermitidas.push('gestion_usuarios');
@@ -975,6 +980,69 @@ const laptopsFiltradas = laptops.filter(lap => {
   return true; 
 });
 
+// --- Lógica para el menú de navegación desplazable ---
+  const navItems = useMemo(() => {
+    const items = [];
+    if (tienePermiso(PERMISSIONS.VER_TABLA_GENERAL)) {
+      items.push({ pestana: 'excel_interno', texto: '📊 Tabla General', style: { border: '1px solid rgba(0, 255, 255, 0.4)', whiteSpace: 'nowrap', '--color-activo': '#10b981' } });
+    }
+    if (tienePermiso(PERMISSIONS.VER_INFORMES)) {
+      items.push({ pestana: 'informes', texto: cargando ? '...' : '📧 INFORMES', className: 'btn-header-report', style: { border: '1px solid rgba(0, 255, 127, 0.5)', whiteSpace: 'nowrap', '--color-activo': '#3b82f6' } });
+    }
+    if (tienePermiso(PERMISSIONS.VER_VENTAS)) {
+      items.push({ pestana: 'ventas', texto: '💰 VENTAS', style: { border: '1px solid rgba(255, 193, 7, 0.4)', whiteSpace: 'nowrap', '--color-activo': '#f59e0b' } });
+      items.push({ pestana: 'despachos', texto: '🚚 DESPACHOS', style: { border: '1px solid rgba(59, 130, 246, 0.5)', whiteSpace: 'nowrap', '--color-activo': '#3b82f6' } });
+    }
+    if (tienePermiso(PERMISSIONS.VER_ALMACEN)) {
+      items.push({ pestana: 'almacen', texto: '📖 ALMACÉN', style: { border: '1px solid rgba(0, 123, 255, 0.5)', whiteSpace: 'nowrap', '--color-activo': '#0ea5e9' } });
+    }
+    if (tienePermiso(PERMISSIONS.REGISTRAR)) {
+      items.push({ pestana: 'registro', texto: `➕ ${editandoId ? 'EDITAR' : 'REGISTRAR'}`, style: { border: '1px solid rgba(138, 43, 226, 0.5)', whiteSpace: 'nowrap', '--color-activo': '#a855f7' } });
+    }
+    if (tienePermiso(PERMISSIONS.GESTIONAR_USUARIOS)) {
+      items.push({ pestana: 'gestion_usuarios', texto: '👤 CONFIGURACIONES', style: { border: '1px solid rgba(255, 105, 180, 0.6)', whiteSpace: 'nowrap', '--color-activo': '#ec4899' } });
+    }
+    return items;
+  }, [tienePermiso, cargando, editandoId]);
+
+  const ITEMS_PER_VIEW = 4;
+  const canScroll = navItems.length > ITEMS_PER_VIEW;
+  const maxScrollIndex = canScroll ? navItems.length - ITEMS_PER_VIEW : 0; // Se mantiene para saber el límite
+
+  // Cuando el número de items cambia (e.g. login con otro usuario), reseteamos el scroll.
+  useEffect(() => {
+    setNavScrollIndex(0);
+  }, [navItems.length]);
+
+  // --- NUEVO: Efecto para calcular el desplazamiento en píxeles ---
+  useEffect(() => {
+    if (!navContainerRef.current || !canScroll) {
+      setNavOffset(0);
+      return;
+    }
+
+    const buttons = Array.from(navContainerRef.current.children);
+    let offset = 0;
+    const gap = 12; // El 'gap' definido en App.css para .nav-actions
+
+    // Sumamos el ancho de los botones que deben quedar fuera de la vista
+    for (let i = 0; i < navScrollIndex; i++) {
+      if (buttons[i]) {
+        offset += buttons[i].offsetWidth + gap;
+      }
+    }
+    setNavOffset(offset);
+  }, [navScrollIndex, navItems, canScroll]); // Se recalcula si cambia el índice o los items
+
+  const handleNavScroll = (direction) => {
+    if (direction === 'right') {
+      setNavScrollIndex(prev => Math.min(prev + 1, maxScrollIndex));
+    } else {
+      setNavScrollIndex(prev => Math.max(0, prev - 1));
+    }
+  };
+  // --- Fin de la lógica de navegación ---
+
 // --- NUEVOS CAMBIOS PASO 2: CÁLCULO DE TOTALES (SOLO ADMINS) ---
 // Estos cálculos se ejecutan sobre el resultado ya filtrado
 let inversionTotal = 0;
@@ -1298,6 +1366,7 @@ if (!autenticado) {
               >
                 📱 Enviar por WhatsApp
               </button>
+
             </div>
 
             <button 
@@ -1552,37 +1621,53 @@ if (!autenticado) {
 </div>
             </div>
           </div>
-          {/* BLOQUE CENTRAL: Navegación (Menú colapsable en móvil) */}
-          <nav className="nav-actions" style={{ transition: 'opacity 0.3s', pointerEvents: editandoId !== null ? 'none' : 'auto', opacity: editandoId !== null ? 0.5 : 1 }}>
-            <button className={pestanaActual === 'excel_interno' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('excel_interno')} style={{ border: '1px solid rgba(0, 255, 255, 0.4)', minWidth: '135px', '--color-activo': '#10b981' }}>
-              📊 Tabla General
+          
+          {/* --- ESTRUCTURA DE NAVEGACIÓN REORDENADA --- */}
+          {canScroll && (
+            <button 
+              className="nav-arrow" 
+              onClick={() => handleNavScroll('left')} 
+              disabled={navScrollIndex === 0}
+            >
+              <ChevronLeft size={20} />
             </button>
-            {tienePermiso(PERMISSIONS.VER_INFORMES) && (
-              <button className={pestanaActual === 'informes' ? 'nav-btn btn-header-report active' : 'nav-btn btn-header-report'} onClick={() => setPestanaActual('informes')} disabled={cargando} style={{ border: '1px solid rgba(0, 255, 127, 0.5)', minWidth: '135px', '--color-activo': '#3b82f6' }}>
-                {cargando ? '...' : '📧 INFORMES'}
-              </button>
-            )}
-            {tienePermiso(PERMISSIONS.VER_VENTAS) && (
-              <button className={pestanaActual === 'ventas' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('ventas')} style={{ border: '1px solid rgba(255, 193, 7, 0.4)', minWidth: '135px', '--color-activo': '#f59e0b' }}>
-                💰 VENTAS
-              </button>
-            )}
-            {tienePermiso(PERMISSIONS.VER_ALMACEN) && (
-              <button className={pestanaActual === 'almacen' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('almacen')} style={{ border: '1px solid rgba(0, 123, 255, 0.5)', minWidth: '135px', '--color-activo': '#0ea5e9' }}>
-                📖 ALMACÉN
-              </button>
-            )}
-            {tienePermiso(PERMISSIONS.REGISTRAR) && (
-              <button className={pestanaActual === 'registro' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('registro')} style={{ border: '1px solid rgba(138, 43, 226, 0.5)', minWidth: '135px', '--color-activo': '#a855f7' }}>
-                ➕ {editandoId ? 'EDITAR' : 'REGISTRAR'}
-              </button>
-            )}
-            {tienePermiso(PERMISSIONS.GESTIONAR_USUARIOS) && (
-              <button className={pestanaActual === 'gestion_usuarios' ? 'nav-btn active' : 'nav-btn'} onClick={() => setPestanaActual('gestion_usuarios')} style={{ border: '1px solid rgba(255, 105, 180, 0.6)', minWidth: '135px', '--color-activo': '#ec4899' }}>
-                👤 CONFIGURACIONES
-              </button>
-            )}
-          </nav>
+          )}
+
+          <div className="nav-actions-wrapper">
+            <nav 
+              ref={navContainerRef}
+              className="nav-actions" 
+              style={{ 
+                transform: `translateX(-${navOffset}px)`, // Usamos el offset dinámico
+                transition: 'transform 0.4s ease-in-out',
+                pointerEvents: editandoId !== null ? 'none' : 'auto', 
+                opacity: editandoId !== null ? 0.5 : 1
+              }}
+            >
+              {navItems.map(item => (
+                <button 
+                  key={item.pestana}
+                  className={`${pestanaActual === item.pestana ? 'nav-btn active' : 'nav-btn'} ${item.className || ''}`} 
+                  onClick={() => setPestanaActual(item.pestana)} 
+                  disabled={cargando && item.pestana === 'informes'}
+                  style={item.style}
+                >
+                  {item.texto}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {canScroll && (
+            <button 
+              className="nav-arrow" 
+              onClick={() => handleNavScroll('right')} 
+              disabled={navScrollIndex >= maxScrollIndex}
+            >
+              <ChevronRight size={20} />
+            </button>
+          )}
+
           {/* BLOQUE DERECHA: Salida (SOLO ESCRITORIO) */}
           <div className="exit-section">
             <button className="btn-exit" onClick={handleLogout} style={{ border: '1px solid rgba(239, 68, 68, 0.6)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)', padding: '8px 15px', fontWeight: 'bold' }}>
@@ -1892,6 +1977,13 @@ if (!autenticado) {
               tienePermiso={tienePermiso}
             />
           </div>
+        )}
+
+        {pestanaActual === 'despachos' && (
+          <DespachosView 
+            laptops={laptops}
+            usuarioLogueado={usuarioLogueado}
+          />
         )}
       </main>
     </div>

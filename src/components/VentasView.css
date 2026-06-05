@@ -938,3 +938,40 @@
 .input-busqueda-ventas.sin-lupa {
   padding-left: 15px !important;
 }
+
+/* ============================================================
+   NUEVOS ESTILOS PARA NAVEGACIÓN CON SCROLL (App.jsx)
+   ============================================================ */
+
+.nav-actions-wrapper {
+  overflow: hidden;
+  /* Se elimina el ancho fijo para que sea flexible y se adapte al contenedor padre */
+  flex: 1; /* Hacemos que el contenedor de los botones ocupe el espacio sobrante */
+  min-width: 0; /* Requerido para que flex:1 funcione correctamente en algunos casos */
+  /* El padding ya no es necesario aquí, el gap del header principal se encarga del espacio */
+  /* padding: 0 15px; */
+}
+
+.nav-arrow {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #334155;
+  color: white;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.nav-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const PanelGestionUsuarios = ({ 
   usuarios, onToggleActivo, usuarioLogueado,
@@ -16,6 +16,22 @@ const PanelGestionUsuarios = ({
     pass: '',
     rol: ''
   });
+
+  // Extendemos los permisos existentes con el nuevo permiso de "DESPACHAR"
+  const extendedAllPermissions = {
+    ...allPermissions,
+    DESPACHAR: 'DESPACHAR'
+  };
+
+  // --- NUEVO: useEffect para forzar permisos obligatorios ---
+  // Hacemos que el rol 'admin_2' siempre tenga el permiso de 'DESPACHAR'.
+  useEffect(() => {
+    const admin2Permissions = rolesConPermisos['admin_2'] || [];
+    if (!admin2Permissions.includes('DESPACHAR')) {
+      // Si admin_2 no tiene el permiso, lo añadimos.
+      onUpdateRolePermissions('admin_2', [...new Set([...admin2Permissions, 'DESPACHAR'])]);
+    }
+  }, [rolesConPermisos, onUpdateRolePermissions]);
 
   const handleCrearRol = (e) => {
     e.preventDefault();
@@ -303,35 +319,46 @@ const PanelGestionUsuarios = ({
                   <div style={{ flex: 2, background: '#020617', padding: '15px', borderRadius: '4px', border: '1px solid #334155' }}>
                     <h4 style={{ margin: '0 0 15px 0', color: '#fff' }}>Permisos para: {rolSeleccionado.replace(/_/g, ' ').toUpperCase()}</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-                      {Object.entries(allPermissions).map(([key, value]) => (
-                        <label key={key} htmlFor={`perm-${key}`} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '4px', transition: 'background 0.2s' }}>
-                          <div style={{
-                            width: '18px',
-                            height: '18px',
-                            border: '2px solid #334155',
-                            borderRadius: '4px',
-                            backgroundColor: rolesConPermisos[rolSeleccionado]?.includes(value) ? '#00ff7f' : '#020617',
-                            marginRight: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            transition: 'background-color 0.2s, border-color 0.2s'
+                      {Object.entries(extendedAllPermissions).map(([key, value]) => {
+                        // --- LÓGICA PARA BLOQUEAR PERMISO OBLIGATORIO ---
+                        const isDespacharPerm = value === 'DESPACHAR';
+                        const isRolAdmin2 = rolSeleccionado === 'admin_2';
+                        const isObligatorio = isDespacharPerm && isRolAdmin2;
+
+                        const isChecked = rolesConPermisos[rolSeleccionado]?.includes(value) || false;
+
+                        return (
+                          <label key={key} htmlFor={`perm-${key}`} style={{ 
+                              display: 'flex', alignItems: 'center', 
+                              cursor: isObligatorio ? 'not-allowed' : 'pointer', 
+                              background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '4px', 
+                              transition: 'background 0.2s',
+                              opacity: isObligatorio ? 0.7 : 1
                           }}>
-                            {rolesConPermisos[rolSeleccionado]?.includes(value) && (
-                              <span style={{ color: 'black', fontWeight: 'bold', fontSize: '14px', lineHeight: 1 }}>✓</span>
-                            )}
-                          </div>
-                          <input
-                            type="checkbox"
-                            id={`perm-${key}`}
-                            checked={rolesConPermisos[rolSeleccionado]?.includes(value) || false}
-                            onChange={(e) => handlePermissionChange(rolSeleccionado, value, e.target.checked)}
-                            style={{ display: 'none' }}
-                          />
-                          <span style={{ color: '#ccc', fontSize: '0.85rem' }}>{key.replace(/_/g, ' ')}</span>
-                        </label>
-                      ))}
+                            <div style={{
+                              width: '18px', height: '18px',
+                              border: '2px solid #334155', borderRadius: '4px',
+                              backgroundColor: (isChecked || isObligatorio) ? '#00ff7f' : '#020617',
+                              marginRight: '10px', display: 'flex',
+                              alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0, transition: 'background-color 0.2s, border-color 0.2s'
+                            }}>
+                              {(isChecked || isObligatorio) && (
+                                <span style={{ color: 'black', fontWeight: 'bold', fontSize: '14px', lineHeight: 1 }}>✓</span>
+                              )}
+                            </div>
+                            <input
+                              type="checkbox"
+                              id={`perm-${key}`}
+                              checked={isChecked || isObligatorio}
+                              disabled={isObligatorio}
+                              onChange={(e) => handlePermissionChange(rolSeleccionado, value, e.target.checked)}
+                              style={{ display: 'none' }}
+                            />
+                            <span style={{ color: '#ccc', fontSize: '0.85rem' }}>{key.replace(/_/g, ' ')}</span>
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -369,7 +396,7 @@ const PanelGestionUsuarios = ({
               gap: '10px', maxHeight: '50vh', overflowY: 'auto',
               background: '#020617', padding: '15px', borderRadius: '8px'
             }}>
-              {Object.entries(allPermissions).map(([key, permission]) => {
+              {Object.entries(extendedAllPermissions).map(([key, permission]) => {
                 const hasPermissionByRole = rolesConPermisos[editingUser.rol]?.includes(permission);
                 const overrides = editingUser.permissionOverrides || { add: [], remove: [] };
                 
