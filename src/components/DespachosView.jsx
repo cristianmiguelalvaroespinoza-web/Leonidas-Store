@@ -17,6 +17,10 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     const docRef = doc(db, "inventario", id); // <--- AQUÍ ESTÁ EL CAMBIO
     await updateDoc(docRef, { precio: Number(nuevoPrecio) });
     console.log("Precio actualizado correctamente");
+    // Actualizar el estado local si el modal de guía está abierto para este equipo
+    if (equipoDetalle && equipoDetalle.fireId === id) {
+      setEquipoDetalle(prev => ({ ...prev, precio: Number(nuevoPrecio) }));
+    }
   } catch (error) {
     console.error("Error al actualizar:", error);
   }
@@ -99,47 +103,47 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
         <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155', textAlign: 'left' }}>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>Fecha Despacho</th>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>N° Pedido</th>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>Propietario / Cliente</th>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>Precio (S/)</th>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>Equipo</th>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>Destino</th>
-              <th style={{ padding: '10px', color: '#94a3b8' }}>Responsable Envío</th>
-              <th style={{ padding: '10px', color: '#94a3b8', textAlign: 'center' }}>Documento</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>Fecha Despacho</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>N° Pedido</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>Propietario / Cliente</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>Precio (S/)</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>Equipo</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>Destino</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8' }}>Responsable Envío</th>
+              <th style={{ padding: '8px 12px', color: '#94a3b8', textAlign: 'center' }}>Documento</th>
             </tr>
           </thead>
           <tbody>
             {despachosHechos.length > 0 ? (
               despachosHechos.map(laptop => (
                 <tr key={laptop.fireId} className="row-hover-simple" style={{ borderBottom: '1px solid #1e293b' }}>
-                  <td style={{ padding: '8px 10px', color: 'white' }}>{laptop.fecha_despacho || laptop.fecha_venta}</td>
-                  <td style={{ padding: '8px 10px', color: '#94a3b8', fontFamily: 'monospace' }}>{laptop.n_pedido || '-'}</td>
-                  <td style={{ padding: '8px 10px', color: 'white', fontWeight: 'bold' }}>{laptop.cliente}</td>
+                  <td style={{ padding: '6px 12px', color: 'white', borderRadius: 0 }}>{laptop.fecha_despacho || laptop.fecha_venta}</td>
+                  <td style={{ padding: '6px 12px', color: '#94a3b8', fontFamily: 'monospace' }}>{laptop.n_pedido || '-'}</td>
+                  <td style={{ padding: '6px 12px', color: 'white', fontWeight: 'bold' }}>{laptop.cliente}</td>
                   
                   {/* AQUÍ ESTÁ EL INPUT QUE QUERÍAS */}
-                  <td style={{ padding: '8px 10px' }}>
+                  <td style={{ padding: '6px 12px' }}>
                     <input 
                       type="number" 
                       defaultValue={laptop.precio || ''} 
                       onBlur={(e) => handlePrecioChange(laptop.fireId, e.target.value)}
-                      style={{ background: '#0f172a', border: '1px solid #334155', color: '#00ff7f', padding: '5px', borderRadius: '4px', width: '80px' }}
+                      style={{ background: '#0f172a', border: '1px solid #334155', color: '#00ff7f', padding: '4px', borderRadius: '4px', width: '80px', height: '28px' }}
                     />
                   </td>
 
-                  <td style={{ padding: '8px 10px', color: 'white' }}>
+                  <td style={{ padding: '6px 12px', color: 'white' }}>
                     {laptop.marca} {laptop.modelo} <br/>
                     <small style={{ color: '#94a3b8' }}>S/N: {laptop.serial}</small>
                   </td>
-                  <td style={{ padding: '8px 10px', color: '#00ff7f', fontWeight: 'bold' }}>
+                  <td style={{ padding: '6px 12px', color: '#00ff7f', fontWeight: 'bold' }}>
                     <Truck size={14} style={{ display: 'inline', marginRight: '5px' }}/>
                     {laptop.destino}
                   </td>
-                  <td style={{ padding: '8px 10px', color: '#60a5fa' }}>{laptop.responsable_despacho || 'N/A'}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                  <td style={{ padding: '6px 12px', color: '#60a5fa' }}>{laptop.responsable_despacho || 'N/A'}</td>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', borderRadius: 0 }}>
                     <button 
                       onClick={() => abrirGuiaEnvio(laptop)}
-                      style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                      style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                     >
                       <Package size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }}/>
                       Ver Guía
@@ -204,6 +208,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
                   <th style={{ padding: '6px 8px', textAlign: 'center', width: '60px', border: '1px solid #000', fontSize: '12px', color: 'black' }}>CANT.</th>
                   <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #000', fontSize: '12px', color: 'black' }}>DESCRIPCIÓN DEL ARTÍCULO</th>
                   <th style={{ padding: '6px 8px', textAlign: 'center', width: '150px', border: '1px solid #000', fontSize: '12px', color: 'black' }}>N° DE SERIE</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right', width: '80px', border: '1px solid #000', fontSize: '12px', color: 'black' }}>PRECIO</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,6 +220,9 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
                   </td>
                   <td style={{ padding: '4px 8px', border: '1px solid #334155', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
                     {equipoDetalle.serial}
+                  </td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #334155', textAlign: 'right', fontWeight: 'bold', fontSize: '12px', color: '#00ff7f' }}>
+                    S/ {Number(equipoDetalle.precio || 0).toFixed(2)}
                   </td>
                 </tr>
               </tbody>

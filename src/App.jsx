@@ -1636,7 +1636,13 @@ if (!autenticado) {
                 }}
               >
                 {navItems.map(item => (
-                  <button key={item.pestana} className={`${pestanaActual === item.pestana ? 'nav-btn active' : 'nav-btn'} ${item.className || ''}`} onClick={() => setPestanaActual(item.pestana)} style={item.style}>
+                  <button 
+                    key={item.pestana} 
+                    className={`${pestanaActual === item.pestana ? 'nav-btn active' : 'nav-btn'} ${item.className || ''}`} 
+                    onClick={() => setPestanaActual(item.pestana)} 
+                    style={item.style}
+                    disabled={editandoId !== null} // <-- AQUÍ ESTÁ LA MAGIA
+                  >
                     {item.texto}
                   </button>
                 ))}

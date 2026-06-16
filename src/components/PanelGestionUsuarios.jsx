@@ -114,7 +114,8 @@ const PanelGestionUsuarios = ({
     textAlign: 'left',
     verticalAlign: 'middle',
     whiteSpace: 'nowrap',
-    borderBottom: '1px solid #334155'
+    borderBottom: '1px solid #334155',
+    borderRadius: '0px' // Añadido para hacer las esquinas cuadradas
   };
 
   const headerCellStyle = {

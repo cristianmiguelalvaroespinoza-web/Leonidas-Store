@@ -26,10 +26,13 @@ const VentasView = ({
   const [modoVenta, setModoVenta] = useState(false); 
   const [nombreCliente, setNombreCliente] = useState("");
   const [destinoVenta, setDestinoVenta] = useState("LIMA");
-  
+
   // --- NUEVOS ESTADOS PARA EL PANEL DE DESPACHO ---
   const [cargandoDespacho, setCargandoDespacho] = useState(null); 
   const [destinosDespacho, setDestinosDespacho] = useState({}); 
+  const [mostrarPanelDespacho, setMostrarPanelDespacho] = useState(false);
+  const [despachosSeleccionados, setDespachosSeleccionados] = useState([]);
+
 
   const manejarVentaProxima = (laptop) => {
     setEquipoDetalle(laptop);
@@ -54,11 +57,13 @@ const VentasView = ({
     }
   };
 
-  // Venta masiva
-  const finalizarVentaLote = () => {
-    setMostrarInforme(true); 
+  const toggleSeleccionDespacho = (laptop) => {
+    if (despachosSeleccionados.find(l => l.fireId === laptop.fireId)) {
+      setDespachosSeleccionados(despachosSeleccionados.filter(l => l.fireId !== laptop.fireId));
+    } else {
+      setDespachosSeleccionados([...despachosSeleccionados, laptop]);
+    }
   };
-
   const descargarPDF = async () => {
     const elemento = document.querySelector(".contenedor-boleta-formal");
     if(!elemento) return;
@@ -181,6 +186,49 @@ const VentasView = ({
         setCargandoDespacho(null);
     }
   };
+
+  const manejarDespachoLote = async () => {
+    const nuevoDestino = destinosDespacho['LOTE']; // Usamos una clave especial para el destino del lote
+    if (despachosSeleccionados.length === 0) {
+      alert("No ha seleccionado ningún equipo para despachar en lote.");
+      return;
+    }
+    if (!nuevoDestino || !nuevoDestino.trim()) {
+      alert("Por favor, ingrese un destino para el lote.");
+      return;
+    }
+
+    if (!window.confirm(`¿Está seguro de despachar ${despachosSeleccionados.length} equipos a ${nuevoDestino.toUpperCase()}?`)) {
+      return;
+    }
+
+    setCargandoDespacho('LOTE'); // Usamos una clave especial para el estado de carga del lote
+    try {
+      await Promise.all(despachosSeleccionados.map(async (laptop) => {
+        const laptopId = laptop.fireId || laptop.id;
+        const equipoRef = doc(db, "inventario", laptopId.trim());
+        return updateDoc(equipoRef, {
+          destino: nuevoDestino.toUpperCase(),
+          estado_despacho: 'DESPACHADO',
+          fecha_despacho: new Date().toLocaleDateString('es-PE'),
+          responsable_despacho: usuarioLogueado?.nombre
+        });
+      }));
+      alert(`¡Lote de ${despachosSeleccionados.length} equipos despachado a ${nuevoDestino.toUpperCase()}!`);
+      setDespachosSeleccionados([]);
+      setDestinosDespacho(prev => {
+        const newDestinos = { ...prev };
+        delete newDestinos['LOTE'];
+        return newDestinos;
+      });
+    } catch (error) {
+      console.error("Error al despachar lote:", error);
+      alert("Falló la conexión con la base de datos al intentar despachar el lote: " + error.message);
+    } finally {
+      setCargandoDespacho(null);
+    }
+  };
+
   
   const ventasFiltradas = laptops.filter(lap => {
     const estaEnStock = (lap.estado || "STOCK").toUpperCase() === 'STOCK';
@@ -223,8 +271,16 @@ const VentasView = ({
   return (
     <div className="ventas-view-container fade-in">
       <div className="section-header">
-        <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
-        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
+          <button 
+            className="btn-ver-todo-ventas" 
+            style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}
+            onClick={() => setMostrarPanelDespacho(true)}
+          >
+            🚚 Despachos Pendientes ({laptopsParaDespacho.length})
+          </button>
+        </div>
         <div className="header-controls-ventas mobile-stack">
           <button className="btn-ver-todo-ventas" onClick={limpiarFiltros}>
             <RotateCcw size={16} /> Ver Todo
@@ -254,21 +310,6 @@ const VentasView = ({
         </div>
       </div>
 
-      <div className="table-wrapper-global">
-        <AlmacenTabla 
-          laptops={ventasFiltradas} 
-          usuarioLogueado={usuarioLogueado}
-          setModalImagen={setModalImagen}
-          onVenderClick={manejarVentaProxima}
-          activarEdicion={activarEdicion}
-          manejarEliminar={manejarEliminar}
-          laptopsSeleccionadas={laptopsSeleccionadas}
-          toggleSeleccion={toggleSeleccion}
-          modoVentas={true}
-          tienePermiso={tienePermiso} 
-        />
-      </div>
-
       {laptopsSeleccionadas.length > 0 && (
         <div className="bar-multiventa mobile-stack" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: '#fff' }}>
@@ -292,91 +333,153 @@ const VentasView = ({
           </div>
         </div>
       )}
+      <div className="table-wrapper-global">
+        <AlmacenTabla 
+          laptops={ventasFiltradas} 
+          usuarioLogueado={usuarioLogueado}
+          setModalImagen={setModalImagen}
+          onVenderClick={manejarVentaProxima}
+          activarEdicion={activarEdicion}
+          manejarEliminar={manejarEliminar}
+          laptopsSeleccionadas={laptopsSeleccionadas}
+          toggleSeleccion={toggleSeleccion}
+          modoVentas={true}
+          tienePermiso={tienePermiso} 
+        />
+      </div>
 
       {/* ================================== */}
-      {/* NUEVA SECCIÓN DE DESPACHO     */}
+      {/* MODAL DE PANEL DE DESPACHO         */}
       {/* ================================== */}
-      {/* MODO PRUEBA: Cambiado a "true &&" para que SIEMPRE sea visible en pantalla y puedas probarlo */}
-      {true && (
-        <div className="dispatch-section" style={{ marginTop: '40px', background: '#0f172a', padding: '20px', borderRadius: '8px', border: '1px solid #334155' }}>
-          <h2 style={{ color: '#fff', borderBottom: '1px solid #334155', paddingBottom: '15px', marginBottom: '20px' }}>
-            🚚 Panel de Despachos Pendientes ({laptopsParaDespacho.length})
-          </h2>
-          <div className="table-wrapper-global">
-            <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155', textAlign: 'left' }}>
-                  <th style={{ padding: '10px', color: '#94a3b8' }}>Fecha Venta</th>
-                  <th style={{ padding: '10px', color: '#94a3b8' }}>Cliente</th>
-                  <th style={{ padding: '10px', color: '#94a3b8' }}>Equipo</th>
-                  <th style={{ padding: '10px', color: '#94a3b8' }}>Destino Actual</th>
-                  <th style={{ padding: '10px', color: '#94a3b8', width: '200px' }}>Nuevo Destino</th>
-                  <th style={{ padding: '10px', color: '#94a3b8', textAlign: 'center' }}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {laptopsParaDespacho.length > 0 ? (
-                  laptopsParaDespacho.map(laptop => (
-                    <tr key={laptop.fireId} className="row-hover-simple">
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.fecha_venta}</td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.cliente}</td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>
-                        {laptop.marca} {laptop.modelo}
-                        <br />
-                        <small style={{ color: '#94a3b8' }}>S/N: {laptop.serial}</small>
-                      </td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.destino}</td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>
-                        <input
-                          type="text"
-                          placeholder="Ciudad o provincia..."
-                          value={destinosDespacho[laptop.fireId] || ''}
-                          onChange={(e) => {
-                            const { value } = e.target;
-                            setDestinosDespacho(prev => ({
-                              ...prev,
-                              [laptop.fireId]: value
-                            }));
-                          }}
-                          style={{
-                            width: '100%',
-                            background: '#1e293b',
-                            border: '1px solid #334155',
-                            color: 'white',
-                            borderRadius: '4px',
-                            padding: '8px'
-                          }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b', textAlign: 'center' }}>
-                        <button
-                          onClick={() => manejarDespacho(laptop)}
-                          disabled={cargandoDespacho === laptop.fireId}
-                          style={{
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            padding: '8px 15px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          {cargandoDespacho === laptop.fireId ? 'Enviando...' : 'Despachar'}
-                        </button>
+      {mostrarPanelDespacho && (
+        <div className="overlay-informe-leonidas">
+          <div className="dispatch-section" style={{ width: '90%', maxWidth: '1200px', margin: 'auto', background: '#0f172a', padding: '20px', borderRadius: '8px', border: '1px solid #334155', position: 'relative' }}>
+            <button className="btn-cerrar-boleta-esquina" onClick={() => setMostrarPanelDespacho(false)}>
+              <X size={24} />
+            </button>
+            <h2 style={{ color: '#fff', borderBottom: '1px solid #334155', paddingBottom: '15px', marginBottom: '20px' }}>
+              🚚 Panel de Despachos Pendientes ({laptopsParaDespacho.length})
+            </h2>
+
+            {/* --- CONTROLES PARA DESPACHO EN LOTE --- */}
+            {despachosSeleccionados.length > 0 && (
+              <div className="bar-multiventa" style={{ background: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                <span style={{ color: '#fff' }}>
+                  <b>{despachosSeleccionados.length}</b> equipos seleccionados para despacho.
+                </span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Destino del Lote..."
+                    value={destinosDespacho['LOTE'] || ''}
+                    onChange={(e) => setDestinosDespacho(prev => ({ ...prev, 'LOTE': e.target.value }))}
+                    style={{
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      color: 'white',
+                      borderRadius: '4px',
+                      padding: '10px',
+                      width: '200px'
+                    }}
+                  />
+                  <button
+                    className="btn-vender-masivo"
+                    onClick={manejarDespachoLote}
+                    disabled={cargandoDespacho === 'LOTE'}
+                    style={{ background: '#3b82f6', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    {cargandoDespacho === 'LOTE' ? 'Enviando...' : `🚚 DESPACHAR LOTE`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="table-wrapper-global">
+              <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155', textAlign: 'left' }}>
+                    <th style={{ padding: '10px', width: '40px' }}>
+                       {/* Checkbox para seleccionar todos (opcional, no implementado para simplicidad) */}
+                    </th>
+                    <th style={{ padding: '10px', color: '#94a3b8' }}>Fecha Venta</th>
+                    <th style={{ padding: '10px', color: '#94a3b8' }}>Cliente</th>
+                    <th style={{ padding: '10px', color: '#94a3b8' }}>Equipo</th>
+                    <th style={{ padding: '10px', color: '#94a3b8' }}>Destino Actual</th>
+                    <th style={{ padding: '10px', color: '#94a3b8', width: '200px' }}>Nuevo Destino (Individual)</th>
+                    <th style={{ padding: '10px', color: '#94a3b8', textAlign: 'center' }}>Acción Individual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {laptopsParaDespacho.length > 0 ? (
+                    laptopsParaDespacho.map(laptop => (
+                      <tr key={laptop.fireId} className="row-hover-simple">
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            className="custom-checkbox-despacho"
+                            checked={despachosSeleccionados.some(l => l.fireId === laptop.fireId)}
+                            onChange={() => toggleSeleccionDespacho(laptop)}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.fecha_venta}</td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.cliente}</td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>
+                          {laptop.marca} {laptop.modelo}
+                          <br />
+                          <small style={{ color: '#94a3b8' }}>S/N: {laptop.serial}</small>
+                        </td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>{laptop.destino}</td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b' }}>
+                          <input
+                            type="text"
+                            placeholder="Ciudad o provincia..."
+                            value={destinosDespacho[laptop.fireId] || ''}
+                            onChange={(e) => {
+                              const { value } = e.target;
+                              setDestinosDespacho(prev => ({
+                                ...prev,
+                                [laptop.fireId]: value
+                              }));
+                            }}
+                            style={{
+                              width: '100%',
+                              background: '#1e293b',
+                              border: '1px solid #334155',
+                              color: 'white',
+                              borderRadius: '4px',
+                              padding: '8px'
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b', textAlign: 'center' }}>
+                          <button
+                            onClick={() => manejarDespacho(laptop)}
+                            disabled={cargandoDespacho === laptop.fireId}
+                            style={{
+                              background: '#16a34a',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px 15px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {cargandoDespacho === laptop.fireId ? 'Enviando...' : 'Despachar'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                        No hay equipos pendientes de despacho.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
-                      No hay equipos pendientes de despacho. <br/>
-                      <small>(Nota: Si acabas de vender un equipo y no aparece aquí, es porque la vista principal no está enviando los equipos en estado "VENDIDO" a esta sección).</small>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

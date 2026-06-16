@@ -938,3 +938,41 @@
 .input-busqueda-ventas.sin-lupa {
   padding-left: 15px !important;
 }
+
+/* ============================================================
+   CHECKBOX PERSONALIZADO PARA PANEL DE DESPACHOS
+   ============================================================ */
+
+.custom-checkbox-despacho {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 20px;
+  height: 20px;
+  background-color: #1e293b;
+  border: 2px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.custom-checkbox-despacho:hover {
+  border-color: #3b82f6;
+}
+
+.custom-checkbox-despacho:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.custom-checkbox-despacho:checked::after {
+  content: '✓';
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}

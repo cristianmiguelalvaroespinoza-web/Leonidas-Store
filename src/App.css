@@ -331,6 +331,18 @@ body {
     opacity: 1;
 }
 
+.nav-btn:disabled, .nav-btn:disabled:hover {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  background: transparent !important;
+  color: var(--texto-suave) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  /* Anulamos el borde inferior del botón activo */
+  border-bottom-color: transparent !important; 
+  /* Evitamos que se mueva al pasar el mouse */
+  transform: none !important;
+}
 .nav-btn.active {
   /* 1. Mantenemos el fondo base sutil */
   background: rgba(255, 255, 255, 0.05) !important; 
