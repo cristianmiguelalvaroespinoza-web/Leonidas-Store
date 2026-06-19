@@ -88,29 +88,26 @@ const datosExcel = laptops.slice().reverse().map(laptop => ({
   }, [editandoId, form.serial]);
 
   const manejarEnvioLocal = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // 1. Filtramos las cajitas para ignorar las que dejaste vacías
-  const serialesValidos = listaSeriales.filter(s => s.trim() !== "");
+    // 1. Filtramos las cajas
+    const serialesValidos = listaSeriales.filter(s => s && s.trim() !== "");
 
-  // 2. Si presionas guardar sin llenar ni una sola cajita, te avisa
-  if (serialesValidos.length === 0) {
-    alert("El equipo debe tener al menos un número de serie.");
-    return;
-  }
+    // 2. Lógica para seriales opcionales
+    const serialesFinales = serialesValidos.length > 0 ? serialesValidos.join(', ') : "S/N";
 
-  // 3. EL TRUCO: Unimos las cajitas con comas y actualizamos el 'form'
-  // Así engañamos a la validación antigua para que reciba lo que espera.
-  form.serial = serialesValidos.join(', ');
-  form.cantidad = serialesValidos.length; // ¡Se calcula solo!
+    // 3. Actualizamos el 'form'
+    form.serial = serialesFinales;
+    form.cantidad = serialesValidos.length > 0 ? serialesValidos.length : (form.cantidad || 1);
 
-  // 4. Mandamos a guardar
-  const exito = await guardarLaptop(e);
+    // 4. Mandamos a guardar
+    const exito = await guardarLaptop(e);
+    
+    if (exito !== false) {
+      setListaSeriales([""]);
+    }
+  };
   
-  if (exito !== false) {
-    setListaSeriales([""]);
-  }
-};
   const manejarCancelarLocal = () => {
     let confirmar = true;
     if (editandoId) {
@@ -341,7 +338,6 @@ const datosExcel = laptops.slice().reverse().map(laptop => ({
                         type="text"
                         placeholder={`Serie #${index + 1}`}
                         value={s}
-                        required
                         style={{ border: 'none', background: 'transparent', color: 'white' }}
                         onChange={(e) => {
                           const n = [...listaSeriales];

@@ -665,10 +665,14 @@ const manejarGeneracionReporte = (formato, config = {}) => {
 
   if (!editandoId) {
     const serialesLimpios = listaSeriales.map(s => s.trim().toUpperCase()).filter(s => s !== "");
-    if (serialesLimpios.length === 0) return alert("❌ Debes ingresar al menos un serial.");
-    const tieneDuplicados = new Set(serialesLimpios).size !== serialesLimpios.length;
-    if (tieneDuplicados) return alert("❌ Hay seriales duplicados en la lista.");
-    serialesFinales = serialesLimpios; 
+    if (serialesLimpios.length === 0) {
+      // Si no se ingresan seriales, se asume una unidad sin serial.
+      serialesFinales = [''];
+    } else {
+      const tieneDuplicados = new Set(serialesLimpios).size !== serialesLimpios.length;
+      if (tieneDuplicados) return alert("❌ Hay seriales duplicados en la lista.");
+      serialesFinales = serialesLimpios;
+    }
   } else {
     if (!form.serial || form.serial.trim() === "") {
       return alert("❌ El equipo debe tener un número de serie.");

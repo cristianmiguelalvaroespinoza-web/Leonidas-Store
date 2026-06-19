@@ -2,45 +2,47 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import React, { useState, useMemo } from 'react';
 import AlmacenTabla from './AlmacenTabla';
-import { X, Printer, User, MapPin, CheckCircle, FileText, CalendarDays, Search, RotateCcw } from 'lucide-react'; 
+import { X, Printer, User, MapPin, CheckCircle, FileText, CalendarDays, Search, RotateCcw } from 'lucide-react';
 import './VentasView.css';
-import { db } from '../firebase'; 
+import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
-const VentasView = ({ 
-  laptops, 
-  usuarioLogueado, 
-  setModalImagen, 
-  setFotoActual, 
-  activarEdicion, 
+const VentasView = ({
+  laptops,
+  usuarioLogueado,
+  setModalImagen,
+  setFotoActual,
+  activarEdicion,
   manejarEliminar,
   manejarGeneracionReporte,
   tienePermiso // <-- NUEVA PROP
 }) => {
-  const [cargando, setCargando] = useState(false); 
+  const [cargando, setCargando] = useState(false);
   const [busquedaVentas, setBusquedaVentas] = useState("");
-  const [filtroFecha, setFiltroFecha] = useState(""); 
+  const [filtroFecha, setFiltroFecha] = useState("");
   const [laptopsSeleccionadas, setLaptopsSeleccionadas] = useState([]);
-  const [equipoDetalle, setEquipoDetalle] = useState(null); 
+  const [equipoDetalle, setEquipoDetalle] = useState(null);
   const [mostrarInforme, setMostrarInforme] = useState(false);
-  const [modoVenta, setModoVenta] = useState(false); 
+  const [modoVenta, setModoVenta] = useState(false);
   const [nombreCliente, setNombreCliente] = useState("");
-  const [destinoVenta, setDestinoVenta] = useState("LIMA");
+  const [origenVenta, setOrigenVenta] = useState("LIMA"); // Origen fijo: Lima (no editable)
+  const [destinoVenta, setDestinoVenta] = useState(""); // Destino opcional: si se llena, se despacha junto con la venta
 
   // --- NUEVOS ESTADOS PARA EL PANEL DE DESPACHO ---
-  const [cargandoDespacho, setCargandoDespacho] = useState(null); 
-  const [destinosDespacho, setDestinosDespacho] = useState({}); 
+  const [cargandoDespacho, setCargandoDespacho] = useState(null);
+  const [destinosDespacho, setDestinosDespacho] = useState({});
   const [mostrarPanelDespacho, setMostrarPanelDespacho] = useState(false);
   const [despachosSeleccionados, setDespachosSeleccionados] = useState([]);
 
 
   const manejarVentaProxima = (laptop) => {
     setEquipoDetalle(laptop);
-    setLaptopsSeleccionadas([]); 
+    setLaptopsSeleccionadas([]);
     setMostrarInforme(true);
-    setModoVenta(false); 
+    setModoVenta(false);
     setNombreCliente("");
-    setDestinoVenta("LIMA");
+    setOrigenVenta("LIMA");
+    setDestinoVenta("");
   };
 
   const limpiarFiltros = () => {
@@ -71,19 +73,19 @@ const VentasView = ({
     const botones = document.querySelector(".grupo-botones-boleta-no-imprimir");
     const botonX = document.querySelector(".btn-cerrar-boleta-esquina");
     const inputsVenta = document.querySelector(".contenedor-confirmar-venta-formal");
-    
+
     if(botones) botones.style.display = 'none';
     if(botonX) botonX.style.display = 'none';
     if(inputsVenta) inputsVenta.style.display = 'none';
 
     try {
-      const canvas = await html2canvas(elemento, { 
-        scale: 2, 
+      const canvas = await html2canvas(elemento, {
+        scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
-        windowWidth: 800 
+        windowWidth: 800
       });
-      
+
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -92,8 +94,8 @@ const VentasView = ({
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgWidth = 190; 
-      const marginX = (pdfWidth - imgWidth) / 2; 
+      const imgWidth = 190;
+      const marginX = (pdfWidth - imgWidth) / 2;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       pdf.addImage(imgData, "PNG", marginX, 10, imgWidth, imgHeight);
@@ -124,30 +126,35 @@ const VentasView = ({
     await descargarPDF();
 
     try {
-      setCargando(true); 
+      setCargando(true);
 
       await Promise.all(listaVenta.map(async (laptop) => {
-        const laptopId = laptop.fireId || laptop.id;
-        if (!laptopId) throw new Error("ID de equipo no encontrado.");
+  const laptopId = laptop.fireId || laptop.id;
+  if (!laptopId) throw new Error("ID de equipo no encontrado.");
 
-        const equipoRef = doc(db, "inventario", laptopId.trim());
-        
-        return updateDoc(equipoRef, {
-          estado: "VENDIDO",
-          cliente: nombreCliente.toUpperCase(),
-          fecha_venta: new Date().toLocaleDateString('es-PE'), 
-          destino: destinoVenta.toUpperCase(),
-          vendedor_final: usuarioLogueado?.nombre || "Sistema", 
-          responsable_venta: usuarioLogueado?.nombre || "Sin asignar", 
-          estado_despacho: 'PENDIENTE' 
-        });
+  const equipoRef = doc(db, "inventario", laptopId.trim());
+
+  return updateDoc(equipoRef, {
+    estado: "VENDIDO",
+    cliente: nombreCliente.toUpperCase(),
+    fecha_venta: new Date().toLocaleDateString('es-PE'),
+    // Si el usuario no escribió nada, se guarda LIMA por defecto
+    destino: destinoVenta.trim() === "" ? "LIMA" : destinoVenta.toUpperCase(),
+    vendedor_final: usuarioLogueado?.nombre || "Sistema",
+    responsable_venta: usuarioLogueado?.nombre || "Sin asignar",
+    
+    // --- ESTA ES LA UNIFICACIÓN ---
+    estado_despacho: 'DESPACHADO', 
+    fecha_despacho: new Date().toLocaleDateString('es-PE'),
+    responsable_despacho: usuarioLogueado?.nombre || "Sistema"
+  });
       }));
 
       alert(`¡Venta registrada! ${listaVenta.length} equipo(s) ya no aparecerán en stock.`);
-      
+
       setMostrarInforme(false);
-      setEquipoDetalle(null); 
-      setLaptopsSeleccionadas([]); 
+      setEquipoDetalle(null);
+      setLaptopsSeleccionadas([]);
       setModoVenta(false);
       setNombreCliente("");
       setDestinoVenta("LIMA");
@@ -229,11 +236,11 @@ const VentasView = ({
     }
   };
 
-  
+
   const ventasFiltradas = laptops.filter(lap => {
     const estaEnStock = (lap.estado || "STOCK").toUpperCase() === 'STOCK';
     const tienePrecioValido = lap.precio && Number(lap.precio) > 0;
-    
+
     if (!estaEnStock) return false;
 
     if (filtroFecha) {
@@ -241,29 +248,29 @@ const VentasView = ({
       const f1 = `${parseInt(day)}/${parseInt(month)}/${year}`;
       const f2 = `${day}/${month}/${year}`;
 
-      const fechaParaFiltrar = lap.fechaIngreso || lap.fecha; 
+      const fechaParaFiltrar = lap.fechaIngreso || lap.fecha;
 
       if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
         return false;
       }
     }
     const texto = busquedaVentas.toLowerCase();
-    
+
     return (
-      lap.marca?.toLowerCase().includes(texto) || 
+      lap.marca?.toLowerCase().includes(texto) ||
       lap.modelo?.toLowerCase().includes(texto) ||
       lap.procesador?.toLowerCase().includes(texto) ||
       lap.ram?.toLowerCase().includes(texto) ||
-      lap.disco?.toLowerCase().includes(texto) || 
+      lap.disco?.toLowerCase().includes(texto) ||
       lap.gpu?.toLowerCase().includes(texto) ||
       lap.serial?.toLowerCase().includes(texto) ||
       lap.id?.toLowerCase().includes(texto)
     );
   });
 
-  const laptopsParaDespacho = useMemo(() => 
-    laptops.filter(l => 
-      l.estado?.toUpperCase() === 'VENDIDO' && 
+  const laptopsParaDespacho = useMemo(() =>
+    laptops.filter(l =>
+      l.estado?.toUpperCase() === 'VENDIDO' &&
       (l.estado_despacho === 'PENDIENTE' || !l.estado_despacho)
     )
   , [laptops]);
@@ -273,8 +280,8 @@ const VentasView = ({
       <div className="section-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
-          <button 
-            className="btn-ver-todo-ventas" 
+          <button
+            className="btn-ver-todo-ventas"
             style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}
             onClick={() => setMostrarPanelDespacho(true)}
           >
@@ -287,8 +294,8 @@ const VentasView = ({
           </button>
 
           <div className="calendar-box-ventas">
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
               className="input-calendar-ventas"
@@ -316,14 +323,14 @@ const VentasView = ({
             Has seleccionado <b>{laptopsSeleccionadas.length}</b> equipos.
           </span>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              className="btn-vender-masivo" 
-              onClick={() => setMostrarInforme(true)} 
+            <button
+              className="btn-vender-masivo"
+              onClick={() => setMostrarInforme(true)}
               style={{ background: '#00ff7f', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
             >
               💰 VENDER LOTE
             </button>
-            <button 
+            <button
               className="btn-cancelar-lote"
               onClick={() => setLaptopsSeleccionadas([])}
               style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
@@ -334,8 +341,8 @@ const VentasView = ({
         </div>
       )}
       <div className="table-wrapper-global">
-        <AlmacenTabla 
-          laptops={ventasFiltradas} 
+        <AlmacenTabla
+          laptops={ventasFiltradas}
           usuarioLogueado={usuarioLogueado}
           setModalImagen={setModalImagen}
           onVenderClick={manejarVentaProxima}
@@ -344,7 +351,7 @@ const VentasView = ({
           laptopsSeleccionadas={laptopsSeleccionadas}
           toggleSeleccion={toggleSeleccion}
           modoVentas={true}
-          tienePermiso={tienePermiso} 
+          tienePermiso={tienePermiso}
         />
       </div>
 
@@ -501,8 +508,8 @@ const VentasView = ({
                 <h2 style={{color: 'white'}}>BOLETA DE VENTA</h2>
                 <h3 style={{color: 'white'}}>ELECTRÓNICA</h3>
                 <p className="numero-doc" style={{color: 'white'}}>
-                    {equipoDetalle?.id ? `B001-${equipoDetalle.id.substring(0,6).toUpperCase()}` : 
-                     laptopsSeleccionadas.length > 0 ? `B001-LOTE-${laptopsSeleccionadas.length}` : 
+                    {equipoDetalle?.id ? `B001-${equipoDetalle.id.substring(0,6).toUpperCase()}` :
+                     laptopsSeleccionadas.length > 0 ? `B001-LOTE-${laptopsSeleccionadas.length}` :
                      "B001-N/A"}
                 </p>
               </div>
@@ -516,6 +523,11 @@ const VentasView = ({
                   <span style={{color: 'white'}}>{nombreCliente.toUpperCase() || "________________________"}</span>
                 </div>
                 <div className="dato-cliente-fila">
+      <MapPin size={16} className="icono-dato" />
+      <label>ORIGEN:</label>
+      <span style={{color: 'white'}}>LIMA</span>
+    </div>
+                <div className="dato-cliente-fila">
                   <CalendarDays size={16} className="icono-dato" />
                   <label>FECHA:</label>
                   <span style={{color: 'white'}}>{new Date().toLocaleDateString()}</span>
@@ -523,7 +535,7 @@ const VentasView = ({
                 <div className="dato-cliente-fila">
                   <MapPin size={16} className="icono-dato" />
                   <label>DESTINO:</label>
-                  <span style={{color: 'white'}}>{destinoVenta.toUpperCase()}</span>
+                  <span style={{color: 'white'}}>{destinoVenta.trim() === "" ? "________________________" : destinoVenta.toUpperCase()}</span>
                 </div>
               </div>
 
@@ -550,10 +562,10 @@ const VentasView = ({
 </table>
 
 {(() => {
-  const totalAPagar = laptopsSeleccionadas.length > 0 
+  const totalAPagar = laptopsSeleccionadas.length > 0
     ? laptopsSeleccionadas.reduce((sum, l) => sum + (Number(l.precio) || 0), 0)
     : (Number(equipoDetalle?.precio) || 0);
-    
+
   return (
     <div className="contenedor-totales-boleta">
       <div className="total-fila-resumen final">
@@ -581,15 +593,15 @@ const VentasView = ({
                   </>
                 ) : (
                   <div className="contenedor-confirmar-venta-formal">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="input-nombre-cliente-formal"
                         placeholder="Nombre del cliente..."
                         value={nombreCliente}
                         onChange={(e) => setNombreCliente(e.target.value)}
                       />
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="input-nombre-cliente-formal"
                         placeholder="Editar Destino..."
                         value={destinoVenta}
