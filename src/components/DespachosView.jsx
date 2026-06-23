@@ -214,16 +214,16 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderRadius: '0px', backgroundColor: '#0f172a', color: '#fff' }}>
-                  <td style={{ padding: '4px 8px', border: '1px solid #334155', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>1</td>
-                  <td style={{ padding: '4px 8px', border: '1px solid #334155', fontSize: '12px' }}>
+                <tr style={{ borderRadius: '0px' }}>
+                  <td style={{ padding: '4px 8px', border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>1</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #000', fontSize: '12px' }}>
                     <strong>LAPTOP {equipoDetalle.marca?.toUpperCase()} {equipoDetalle.modelo?.toUpperCase()}</strong><br/>
-                    <small style={{ color: '#fff', fontSize: '10px' }}>Procesador: {equipoDetalle.procesador} | RAM: {equipoDetalle.ram} | Disco: {equipoDetalle.disco}</small>
+                    <small style={{ color: '#555', fontSize: '10px' }}>Procesador: {equipoDetalle.procesador} | RAM: {equipoDetalle.ram} | Disco: {equipoDetalle.disco}</small>
                   </td>
-                  <td style={{ padding: '4px 8px', border: '1px solid #334155', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+                  <td style={{ padding: '4px 8px', border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
                     {equipoDetalle.serial}
                   </td>
-                  <td style={{ padding: '4px 8px', border: '1px solid #334155', textAlign: 'right', fontWeight: 'bold', fontSize: '12px', color: '#00ff7f' }}>
+                  <td style={{ padding: '4px 8px', border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
                     S/ {Number(equipoDetalle.precio || 0).toFixed(2)}
                   </td>
                 </tr>

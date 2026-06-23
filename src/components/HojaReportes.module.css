@@ -104,8 +104,8 @@
 
 .leonidasTable {
     width: 100%;
-    border-spacing: 0 6px; 
-    border-collapse: separate;
+    border-spacing: 0; 
+    border-collapse: collapse;
     font-size: 14px; 
     color: #cbd5e1;
 }
@@ -137,13 +137,11 @@
 }
 
 .leonidasRow td:first-child {
-    border-left: 1px solid #1e293b;
-    border-radius: 10px 0 0 10px;
+    border-left: 1px solid #1e293b; 
 }
 
 .leonidasRow td:last-child {
-    border-right: 1px solid #1e293b;
-    border-radius: 0 10px 10px 0;
+    border-right: 1px solid #1e293b; 
 }
 
 /* --- ESTILOS DE DATOS --- */
@@ -386,4 +384,3 @@
     grid-template-columns: 1fr;
   }
 }
-

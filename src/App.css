@@ -498,7 +498,7 @@ table tr {
 
 table td {
     background: var(--panel); /* Fondo para cada fila */
-    padding: 18px 20px;
+    padding: 10px 15px; /* Reducido para un estilo más compacto y delgado */
     color: #e2e8f0;
     border-top: 1px solid var(--borde);
     border-bottom: 1px solid var(--borde);
@@ -1514,4 +1514,57 @@ input[type="date"]:hover {
     -webkit-text-fill-color: #000000 !important;
   }
 }
+}
+
+/* ============================================================
+   12. PAGINACIÓN
+   ============================================================ */
+.paginacion-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #0f172a;
+  border-top: 1px solid #1e293b;
+  margin-top: 20px;
+  border-radius: 12px;
+}
+
+.paginacion-info {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.paginacion-botones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paginacion-botones button {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.paginacion-botones button:hover:not(:disabled) {
+  background-color: #334155 !important;
+  border-color: #60a5fa !important;
+}
+
+.paginacion-botones button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginacion-pagina-actual {
+  color: #e2e8f0;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 0 10px;
 }

@@ -1,8 +1,8 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import AlmacenTabla from './AlmacenTabla';
-import { X, Printer, User, MapPin, CheckCircle, FileText, CalendarDays, Search, RotateCcw, Shield } from 'lucide-react';
+import { X, Printer, User, MapPin, CheckCircle, FileText, CalendarDays, Search, RotateCcw, Shield, QrCode } from 'lucide-react';
 import './VentasView.css';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -15,12 +15,15 @@ const VentasView = ({
   activarEdicion,
   manejarEliminar,
   manejarGeneracionReporte,
-  tienePermiso // <-- NUEVA PROP
+  tienePermiso, // <-- NUEVA PROP
+  iniciarEscaneo
 }) => {
   const [garantiaVenta, setGarantiaVenta] = useState("12 MESES");
   const [cargando, setCargando] = useState(false);
   const [busquedaVentas, setBusquedaVentas] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 100;
   const [laptopsSeleccionadas, setLaptopsSeleccionadas] = useState([]);
   const [equipoDetalle, setEquipoDetalle] = useState(null);
   const [mostrarInforme, setMostrarInforme] = useState(false);
@@ -276,19 +279,15 @@ const VentasView = ({
     )
   , [laptops]);
 
+  // Resetear paginación al cambiar filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [busquedaVentas, filtroFecha]);
+
   return (
     <div className="ventas-view-container fade-in">
       <div className="section-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
-          <button
-            className="btn-ver-todo-ventas"
-            style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}
-            onClick={() => setMostrarPanelDespacho(true)}
-          >
-            🚚 Salidas Pendientes ({laptopsParaDespacho.length})
-          </button>
-        </div>
+        <h2 style={{ color: '#fff', margin: 0 }}>💼 GESTIÓN DE VENTAS</h2>
         <div className="header-controls-ventas mobile-stack">
           <button className="btn-ver-todo-ventas" onClick={limpiarFiltros}>
             <RotateCcw size={16} /> Ver Todo
@@ -314,6 +313,22 @@ const VentasView = ({
               onChange={(e) => setBusquedaVentas(e.target.value)}
               className={`input-busqueda-ventas ${busquedaVentas === "" ? "con-lupa" : "sin-lupa"}`}
             />
+            <button 
+              onClick={() => iniciarEscaneo(setBusquedaVentas)} 
+              title="Escanear código de barras o QR"
+              style={{
+                position: 'absolute',
+                right: '10px',
+                background: 'transparent',
+                border: 'none',
+                color: '#8b949e',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex'
+              }}
+            >
+              <QrCode size={18} />
+            </button>
           </div>
         </div>
       </div>
@@ -343,7 +358,7 @@ const VentasView = ({
       )}
       <div className="table-wrapper-global">
         <AlmacenTabla
-          laptops={ventasFiltradas}
+          laptops={ventasFiltradas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
           usuarioLogueado={usuarioLogueado}
           setModalImagen={setModalImagen}
           onVenderClick={manejarVentaProxima}
@@ -355,6 +370,30 @@ const VentasView = ({
           tienePermiso={tienePermiso}
         />
       </div>
+      {Math.ceil(ventasFiltradas.length / itemsPerPage) > 1 && (
+        <div className="paginacion-container">
+          <span className="paginacion-info">
+            Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, ventasFiltradas.length)}-{Math.min(currentPage * itemsPerPage, ventasFiltradas.length)} de {ventasFiltradas.length} registros
+          </span>
+          <div className="paginacion-botones">
+            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+              « Primero
+            </button>
+            <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+              ‹ Anterior
+            </button>
+            <span className="paginacion-pagina-actual">
+              Página {currentPage} de {Math.ceil(ventasFiltradas.length / itemsPerPage)}
+            </span>
+            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(ventasFiltradas.length / itemsPerPage)))} disabled={currentPage === Math.ceil(ventasFiltradas.length / itemsPerPage)}>
+              Siguiente ›
+            </button>
+            <button onClick={() => setCurrentPage(Math.ceil(ventasFiltradas.length / itemsPerPage))} disabled={currentPage === Math.ceil(ventasFiltradas.length / itemsPerPage)}>
+              Último »
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ================================== */}
       {/* MODAL DE PANEL DE DESPACHO         */}

@@ -1,5 +1,5 @@
 
-import { User, Lock, Eye, EyeOff, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Menu, X, ChevronLeft, ChevronRight, QrCode } from 'lucide-react';
 // --- NUEVO: Imports de Firebase para la base de datos en la nube ---
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './App.css';
@@ -47,6 +47,35 @@ const obtenerMesYAnio = (fechaString) => {
   return `${meses[parseInt(mes) - 1]} ${anio}`;
 };
 
+const Paginacion = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="paginacion-container">
+      <span className="paginacion-info">
+        Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}-{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} registros
+      </span>
+      <div className="paginacion-botones">
+        <button onClick={() => onPageChange(1)} disabled={currentPage === 1}>
+          « Primero
+        </button>
+        <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
+          ‹ Anterior
+        </button>
+        <span className="paginacion-pagina-actual">
+          Página {currentPage} de {totalPages}
+        </span>
+        <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>
+          Siguiente ›
+        </button>
+        <button onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages}>
+          Último »
+        </button>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
@@ -54,7 +83,6 @@ function App() {
   const [navOffset, setNavOffset] = useState(0);
   const navContainerRef = useRef(null);
   const [mostrarModalInformes, setMostrarModalInformes] = useState(false);
-  const [indiceEscaneo, setIndiceEscaneo] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 const [mostrarPin, setMostrarPin] = useState(false);
 const [esCelular, setEsCelular] = useState(window.innerWidth <= 768);
@@ -88,6 +116,8 @@ const [usuarioPendiente, setUsuarioPendiente] = useState(null);
   const [tipoFormateoSeleccionado, setTipoFormateoSeleccionado] = useState(null); // 'mes' o 'total'
   const [mesFormateo, setMesFormateo] = useState('');
   const [anioFormateo, setAnioFormateo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 100;
 
   const [form, setForm] = useState({
     marca: '', modelo: '', precio: '', precio_costo: '', serial: '', 
@@ -280,40 +310,39 @@ const manejarEnvioFormal = async (datosFiltrados = null) => {
   }
 };
 
-  const iniciarEscaneo = (index = null) => {
-  setIndiceEscaneo(index);
-  setEscaneando(true);
-
-  // Esperamos un milisegundo a que el div 'reader' aparezca en el DOM
-  setTimeout(() => {
-    const scanner = new Html5QrcodeScanner("reader", { 
-  fps: 15, 
-  qrbox: { width: 250, height: 120 },
-  // ESTO FUERZA LA CÁMARA TRASERA
-  videoConstraints: {
-    facingMode: { ideal: "environment" } 
-  },
-  rememberLastUsedCamera: true
-});
-
-    scanner.render((decodedText) => {
-      if (index !== null) {
-        // Si estamos en registro masivo
-        const nuevaLista = [...listaSeriales];
-        nuevaLista[index] = decodedText.toUpperCase();
-        setListaSeriales(nuevaLista);
-      } else {
-        // Si estamos editando un equipo individual
-        setForm(prev => ({ ...prev, serial: decodedText.toUpperCase() }));
-      }
-      
-      scanner.clear(); // Apagar cámara
-      setEscaneando(false);
-    }, (error) => {
-      // Error silencioso mientras busca el código
-    });
-  }, 300);
-};
+  const iniciarEscaneo = (target) => {
+    setEscaneando(true);
+  
+    setTimeout(() => {
+      const scanner = new Html5QrcodeScanner("reader", { 
+        fps: 15, 
+        qrbox: { width: 250, height: 120 },
+        videoConstraints: {
+          facingMode: { ideal: "environment" } 
+        },
+        rememberLastUsedCamera: true
+      });
+  
+      scanner.render((decodedText) => {
+        const upperCaseText = decodedText.toUpperCase();
+        
+        if (typeof target === 'function') {
+          target(upperCaseText);
+        } else if (target !== null && typeof target === 'number') {
+          const nuevaLista = [...listaSeriales];
+          nuevaLista[target] = upperCaseText;
+          setListaSeriales(nuevaLista);
+        } else {
+          setForm(prev => ({ ...prev, serial: upperCaseText }));
+        }
+        
+        scanner.clear();
+        setEscaneando(false);
+      }, (error) => {
+        // Error silencioso mientras busca el código
+      });
+    }, 300);
+  };
 
   const activarEdicion = (lap) => {
     setEditandoId(lap.fireId);
@@ -408,6 +437,11 @@ const manejarEnvioFormal = async (datosFiltrados = null) => {
       unsubRoles();
     };
   }, []);
+
+  // Resetear paginación al cambiar filtros o pestaña
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [busqueda, fechaFiltro, filtroEstado, fechaConsulta, pestanaActual]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -983,6 +1017,16 @@ const laptopsFiltradas = laptops.filter(lap => {
 
   return true; 
 });
+
+// --- Lógica de paginación ---
+const totalPages = Math.ceil(laptopsFiltradas.length / itemsPerPage);
+const paginatedLaptops = laptopsFiltradas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+const handlePageChange = (page) => {
+  if (page >= 1 && page <= totalPages) {
+    setCurrentPage(page);
+  }
+};
 
 // --- CÁLCULO DE TOTALES (SOLO ADMINS) ---
 // Estos cálculos se ejecutan sobre el resultado ya filtrado
@@ -1755,6 +1799,21 @@ if (!autenticado) {
                   fontWeight: '500'
                 }}
               />
+              <button 
+                  onClick={() => iniciarEscaneo(setBusqueda)}
+                  title="Escanear código de barras o QR"
+                  style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#e2e8f0',
+                      cursor: 'pointer',
+                      padding: '0 0 0 12px',
+                      display: 'flex',
+                      alignItems: 'center'
+                  }}
+              >
+                  <QrCode size={20} />
+              </button>
             </div>
 
               <div className="filter-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1791,7 +1850,7 @@ if (!autenticado) {
 
             <div className="table-wrapper-global">
               <AlmacenTabla 
-                laptops={laptopsFiltradas}
+                laptops={paginatedLaptops}
                 eliminarProducto={manejarEliminar}
                 marcarComoVendido={marcarComoVendido}
                 activarEdicion={activarEdicion} 
@@ -1805,6 +1864,13 @@ if (!autenticado) {
                 }} 
               />
             </div>
+            <Paginacion
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={laptopsFiltradas.length}
+              itemsPerPage={itemsPerPage}
+            />
           </div>
         )}
 
@@ -1852,6 +1918,7 @@ if (!autenticado) {
             manejarEliminar={tienePermiso(PERMISSIONS.ELIMINAR_REGISTRO) ? manejarEliminar : null}
             actualizarProducto={actualizarProducto} // Se usa internamente, no requiere permiso aquí
             tienePermiso={tienePermiso}
+            iniciarEscaneo={iniciarEscaneo}
           />
         )}
 
@@ -1958,7 +2025,7 @@ if (!autenticado) {
               </div>
             </div>
             <HojaReportes 
-              laptops={laptopsFiltradas} 
+              laptops={paginatedLaptops} 
               usuarioLogueado={usuarioLogueado}
               activarEdicion={activarEdicion}
               setModalImagen={setModalImagen}
@@ -1966,6 +2033,14 @@ if (!autenticado) {
               setFechaFiltro={setFechaFiltro}
               eliminarProducto={manejarEliminar}
               tienePermiso={tienePermiso}
+              iniciarEscaneo={iniciarEscaneo}
+            />
+            <Paginacion
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={laptopsFiltradas.length}
+              itemsPerPage={itemsPerPage}
             />
           </div>
         )}

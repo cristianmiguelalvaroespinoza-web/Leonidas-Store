@@ -919,7 +919,7 @@
   background: #1a1d23;
   border: 1px solid #3f4451;
   color: white;
-  padding: 8px 12px 8px 35px; /* Espacio extra a la izquierda para la lupa */
+  padding: 8px 40px 8px 35px; /* Espacio extra a la izquierda para la lupa y derecha para escaner */
   border-radius: 6px;
   width: 250px;
   outline: none;
@@ -975,4 +975,57 @@
   color: white;
   font-size: 16px;
   font-weight: bold;
+}
+
+/* ============================================================
+   PAGINACIÓN (Copiado de App.css para encapsulación)
+   ============================================================ */
+.paginacion-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #0f172a;
+  border-top: 1px solid #1e293b;
+  margin-top: 20px;
+  border-radius: 12px;
+}
+
+.paginacion-info {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.paginacion-botones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paginacion-botones button {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.paginacion-botones button:hover:not(:disabled) {
+  background-color: #334155 !important;
+  border-color: #60a5fa !important;
+}
+
+.paginacion-botones button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginacion-pagina-actual {
+  color: #e2e8f0;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 0 10px;
 }

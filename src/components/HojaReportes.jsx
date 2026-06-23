@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'; 
 import { suscribirseAInventario, eliminarProducto, actualizarProducto } from '../services/api'; 
+import { QrCode } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 
 // IMPORTACIÓN DEL CSS MODULE
@@ -11,15 +12,13 @@ const obtenerMesYAnio = (fechaString) => {
   return `${meses[parseInt(mes) - 1]} ${anio}`;
 };
 
-const HojaReportes = ({ usuarioLogueado, activarEdicion, setModalImagen, fechaFiltro, setFechaFiltro, tienePermiso }) => {
-  const [datos, setDatos] = useState([]);
+const HojaReportes = ({ laptops, usuarioLogueado, activarEdicion, setModalImagen, fechaFiltro, setFechaFiltro, tienePermiso, iniciarEscaneo }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   
   // --- NUEVO ESTADO PARA FILTRAR POR VENDEDOR ---
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
   const [filtroTiempo, setFiltroTiempo] = useState("TODAS"); // <-- AÑADE ESTA LÍNEA
-const [filtroFecha, setFiltroFecha] = useState("");
 const [diasExpandidos, setDiasExpandidos] = useState({});
 
   const toggleDia = (dia) => {
@@ -36,16 +35,8 @@ const toggleModelo = (clave) => {
   const esVendedor = usuarioLogueado?.rol === 'vendedor';
   const esSuperAdmin = usuarioLogueado?.rol === 'super_admin'; 
   const esAdmin2 = usuarioLogueado?.rol === 'admin_2'; 
-
-  useEffect(() => {
-    const desubscribir = suscribirseAInventario((productos) => {
-      setDatos(productos);
-    });
-    return () => desubscribir();
-  }, []);
-
   const stats2026 = useMemo(() => {
-    const lista = datos || [];
+    const lista = laptops || [];
     const ventas2026 = lista.filter(l => 
       l && l.fecha && String(l.fecha).includes('2026') && (l.estado === 'VENDIDO')
     );
@@ -56,7 +47,7 @@ const toggleModelo = (clave) => {
     const utilidadTotal = ventas2026.reduce((acc, curr) => acc + (Number(curr.utilidad) || 0), 0);
 
     return { recaudado, vendidos, enTienda, utilidadTotal };
-  }, [datos]);
+  }, [laptops]);
 
   const limpiarFiltros = () => {
     setBusqueda("");
@@ -66,7 +57,7 @@ const toggleModelo = (clave) => {
   };
 
  // --- LÓGICA DE FILTRADO ACTUALIZADA ---
-  const datosFiltrados = datos.filter(d => {
+  const datosFiltrados = (laptops || []).filter(d => {
     if (!d) return false;
 
     // 1. Filtro por Vendedor
@@ -330,14 +321,32 @@ const toggleModelo = (clave) => {
         </div>
 
         <div className={`${styles.reportesControls} mobile-stack`}>
-          <input
-  type="text"
-  placeholder="Buscar por marca, modelo o serial..."
-  className={styles.inputBusqueda} // <-- TU CLASE SE MANTIENE
-  value={busqueda}
-  onChange={(e) => setBusqueda(e.target.value)}
-  style={{ flex: 1, height: '40px', borderRadius: '6px', padding: '0 15px' }}
-/>
+          <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
+            <input
+              type="text"
+              placeholder="Buscar por marca, modelo o serial..."
+              className={styles.inputBusqueda}
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              style={{ flex: 1, height: '40px', borderRadius: '6px 0 0 6px', padding: '0 15px', borderRight: 'none' }}
+            />
+            <button 
+                onClick={() => iniciarEscaneo(setBusqueda)}
+                title="Escanear código de barras o QR"
+                style={{
+                    height: '40px',
+                    background: '#0f172a',
+                    border: '1px solid #1e293b',
+                    borderLeft: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    padding: '0 12px',
+                    borderRadius: '0 6px 6px 0',
+                    display: 'flex',
+                    alignItems: 'center'
+                }}
+            ><QrCode size={20} /></button>
+          </div>
           
           <button 
             onClick={limpiarFiltros}
@@ -383,7 +392,7 @@ const toggleModelo = (clave) => {
         
         {/* Pestañas originales */}
         <div className={styles.estadoTabs} style={{ margin: 0 }}>
-          <button onClick={() => setFiltroEstado('TODOS')} className={filtroEstado === 'TODOS' ? styles.active : ''}>📋 TODOS ({datos.length})</button>
+          <button onClick={() => setFiltroEstado('TODOS')} className={filtroEstado === 'TODOS' ? styles.active : ''}>📋 TODOS ({laptops?.length || 0})</button>
           <button onClick={() => setFiltroEstado('STOCK')} className={filtroEstado === 'STOCK' ? `${styles.active} ${styles.stock}` : ''}>🟢 STOCK</button>
           <button onClick={() => setFiltroEstado('VENDIDO')} className={filtroEstado === 'VENDIDO' ? `${styles.active} ${styles.vendido}` : ''}>🔴 VENDIDOS / SALIDA</button>
         </div>
@@ -470,8 +479,9 @@ const toggleModelo = (clave) => {
   {(() => {
     let ultimoMesVisto = null;
     let ultimoDiaVisto = null;
-// --- MAGIA PARA JUNTAR TODOS LOS ASUS E410KA-CL464 ---
-datosOrdenados.sort((a, b) => {
+    // Se crea una copia para no mutar las props directamente
+    const datosParaRenderizar = [...datosOrdenados];
+    datosParaRenderizar.sort((a, b) => {
   if (a.fecha === b.fecha) {
     const esAsusA = a.marca?.toUpperCase().trim() === 'ASUS' && a.modelo?.toUpperCase().trim() === 'E410KA-CL464';
     const esAsusB = b.marca?.toUpperCase().trim() === 'ASUS' && b.modelo?.toUpperCase().trim() === 'E410KA-CL464';
@@ -481,7 +491,7 @@ datosOrdenados.sort((a, b) => {
   return 0;
 });
 // -----------------------------------------------------
-    return datosOrdenados.map((item, index) => {
+    return datosParaRenderizar.map((item, index) => {
       // --- NUESTRO MOTOR DE FECHAS ---
       const mesActual = obtenerMesYAnio(item.fecha);
       const diaActual = item.fecha;
@@ -577,10 +587,9 @@ const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo];
                       <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace' }}><strong>S/N:</strong> {item.serial}</span>
                     </div>
                   </td>
-                  {/* 👇 PEGA TU CÓDIGO AQUÍ 👇 */}
-  <td style={{ ...estiloCelda, textAlign: 'center', color: '#00ff7f', fontWeight: 'bold', fontSize: '1.1rem' }}>
-    {datos.filter(l => l.modelo === item.modelo && (l.estado || 'STOCK').toUpperCase() === 'STOCK').length}
-  </td>
+                  <td style={{ ...estiloCelda, textAlign: 'center', color: '#00ff7f', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    {laptops.filter(l => l.modelo === item.modelo && (l.estado || 'STOCK').toUpperCase() === 'STOCK').length}
+                  </td>
                   <td style={{ ...estiloCelda, textAlign: 'center', color: '#cbd5e1', fontSize: '13px', fontWeight: 'bold' }}>
   {item.n_pedido || '-'}
 </td>
