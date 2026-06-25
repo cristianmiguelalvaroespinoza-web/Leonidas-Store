@@ -19,6 +19,11 @@ const HojaReportes = ({ laptops, usuarioLogueado, activarEdicion, setModalImagen
   // --- NUEVO ESTADO PARA FILTRAR POR VENDEDOR ---
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
   const [filtroTiempo, setFiltroTiempo] = useState("TODAS"); // <-- AÑADE ESTA LÍNEA
+
+  // --- INICIO: LÓGICA DE PAGINACIÓN RECONSTRUIDA ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50; // Puedes ajustar esto
+
 const [diasExpandidos, setDiasExpandidos] = useState({});
 
   const toggleDia = (dia) => {
@@ -55,6 +60,11 @@ const toggleModelo = (clave) => {
     setFiltroEstado('TODOS');
     setFiltroVendedor('TODOS'); // Limpiamos también el vendedor
   };
+
+  // Efecto para resetear la paginación cuando los filtros cambian
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [busqueda, fechaFiltro, filtroEstado, filtroVendedor, filtroTiempo]);
 
  // --- LÓGICA DE FILTRADO ACTUALIZADA ---
   const datosFiltrados = (laptops || []).filter(d => {
@@ -225,6 +235,9 @@ const toggleModelo = (clave) => {
   const puedeEliminar = (item) => {
     return tienePermiso && tienePermiso('ELIMINAR_REGISTRO');
   };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
   return (
     <div className={styles.reportesContainer}>
       
@@ -453,7 +466,7 @@ const toggleModelo = (clave) => {
         <table className={styles.leonidasTable} style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0f172a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>
-              <th style={{ ...estiloCelda, width: '40px', color: '#94a3b8', textAlign: 'center', fontWeight: '600' }}>#</th>
+              <th style={{ ...estiloCelda, width: '50px', color: '#94a3b8', textAlign: 'center', fontWeight: '600' }}>#</th>
               <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>FECHA</th>
               {!esVendedor && <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>USUARIO</th>}
               <th style={{ ...estiloCelda, textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>LAPTOP</th>
@@ -467,39 +480,63 @@ const toggleModelo = (clave) => {
               <th style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>ACCIONES</th>
             </tr>
           </thead>
-        <tbody>
-  {(() => {
-    let ultimoMesVisto = null;
-    let ultimoDiaVisto = null;
-
-    // --- FUNCIÓN DE ORDENAMIENTO DEFINITIVA (INCLUYE HORA) ---
-    const obtenerFechaYHoraCompleta = (item) => {
+        {useMemo(() => {
+          const obtenerFechaYHoraCompleta = (item) => {
       const fechaStr = item.fecha_venta || item.fecha;
       const horaStr = item.hora_venta || item.hora;
 
-      if (!fechaStr) return null;
+      if (!fechaStr || typeof fechaStr !== 'string') return null;
 
-      const partesFecha = fechaStr.split('/');
-      if (partesFecha.length !== 3) return null;
-      const [dia, mes, anio] = partesFecha.map(p => parseInt(p, 10));
+      let dia, mes, anio;
+      const separador = fechaStr.includes('/') ? '/' : fechaStr.includes('-') ? '-' : null;
+
+      if (!separador) return null;
+
+      const partes = fechaStr.split(separador);
+      if (partes.length !== 3) return null;
+
+      // Prioriza YYYY-MM-DD si el separador es '-' y la primera parte tiene 4 dígitos
+      if (separador === '-' && partes[0].length === 4) {
+        anio = parseInt(partes[0], 10);
+        mes = parseInt(partes[1], 10);
+        dia = parseInt(partes[2], 10);
+      } 
+      // De lo contrario, asume DD/MM/YYYY o DD-MM-YYYY si la última parte tiene 4 dígitos
+      else if (partes[2].length === 4) {
+        dia = parseInt(partes[0], 10);
+        mes = parseInt(partes[1], 10);
+        anio = parseInt(partes[2], 10);
+      } else {
+        return null; // Formato ambiguo o inválido
+      }
+
+      if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return null;
 
       let horas = 0, minutos = 0;
       if (horaStr) {
-        const match = horaStr.toLowerCase().match(/(\d+):(\d+)\s*(a|p)/);
-        if (match) {
-          horas = parseInt(match[1], 10);
-          minutos = parseInt(match[2], 10);
-          const periodo = match[3];
+        // Intenta parsear formato 12h (ej: "2:30 p.m.")
+        const match12h = horaStr.toLowerCase().match(/(\d+):(\d+)\s*([ap])\.?m?\.?/);
+        if (match12h) {
+          horas = parseInt(match12h[1], 10);
+          minutos = parseInt(match12h[2], 10);
+          const periodo = match12h[3];
 
           if (periodo === 'p' && horas < 12) horas += 12;
           if (periodo === 'a' && horas === 12) horas = 0;
+        } else {
+          // Si no, intenta parsear formato 24h (ej: "14:30")
+          const match24h = horaStr.match(/(\d+):(\d+)/);
+          if (match24h) {
+            horas = parseInt(match24h[1], 10);
+            minutos = parseInt(match24h[2], 10);
+          }
         }
       }
       return new Date(anio, mes - 1, dia, horas, minutos);
     };
 
-    // Ordenamiento unificado y definitivo
-    const datosParaRenderizar = [...datosFiltrados].sort((a, b) => {
+          // 1. ORDENAMIENTO GLOBAL
+          const datosOrdenados = [...datosFiltrados].sort((a, b) => {
       const fechaA = obtenerFechaYHoraCompleta(a);
       const fechaB = obtenerFechaYHoraCompleta(b);
       if (!fechaA) return 1;
@@ -507,17 +544,27 @@ const toggleModelo = (clave) => {
       return fechaB.getTime() - fechaA.getTime(); // Orden descendente (más reciente primero)
     });
 
-    return datosParaRenderizar.map((item, index) => {
-      // --- MOTOR DE FECHAS CORREGIDO ---
+          // 2. PAGINACIÓN (se aplica sobre la lista ya ordenada)
+          const datosPaginados = datosOrdenados.slice(startIndex, startIndex + itemsPerPage);
+
+          return (
+            <tbody>
+              {datosPaginados.map((item, index) => {
+      // --- LÓGICA DE ENCABEZADOS CORREGIDA ---
+      // Usamos un índice global para comparar con el elemento anterior en la lista COMPLETA
+      const globalIndex = startIndex + index;
+      const itemAnterior = globalIndex > 0 ? datosOrdenados[globalIndex - 1] : null;
+
       const fechaRealParaAgrupar = item.fecha_venta || item.fecha;
+      const fechaAnteriorParaAgrupar = itemAnterior ? (itemAnterior.fecha_venta || itemAnterior.fecha) : null;
+
       const mesActual = obtenerMesYAnio(fechaRealParaAgrupar);
+      const mesAnterior = itemAnterior ? obtenerMesYAnio(fechaAnteriorParaAgrupar) : null;
+
       const diaActual = fechaRealParaAgrupar;
       
-      const mostrarEncabezadoMes = mesActual !== ultimoMesVisto;
-      if (mostrarEncabezadoMes) ultimoMesVisto = mesActual;
-
-      const mostrarEncabezadoDia = diaActual !== ultimoDiaVisto;
-      if (mostrarEncabezadoDia) ultimoDiaVisto = diaActual;
+      const mostrarEncabezadoMes = mesActual !== mesAnterior;
+      const mostrarEncabezadoDia = diaActual !== fechaAnteriorParaAgrupar;
 
       const estaExpandido = diasExpandidos[diaActual] !== false;
 
@@ -533,8 +580,8 @@ const modeloLimpio = item.modelo ? String(item.modelo).toUpperCase().trim() : ''
 
 const esModeloAgrupable = marcaLimpia === 'ASUS' && modeloLimpio === 'E410KA-CL464'; 
 
-const claveModelo = `${item.fecha}-${item.marca}-${item.modelo}`;
-const itemAnterior = index > 0 ? datosParaRenderizar[index - 1] : null;
+const claveModelo = `${fechaRealParaAgrupar}-${item.marca}-${item.modelo}`;
+const itemAnteriorDePagina = index > 0 ? datosPaginados[index - 1] : null; // Para la lógica de agrupación de modelos dentro de la página
 const mismoModeloQueAnterior = itemAnterior && itemAnterior.marca === item.marca && itemAnterior.modelo === item.modelo;
 
 // Solo muestra el título si es EXACTAMENTE ese modelo y el de arriba no era igual
@@ -588,7 +635,7 @@ const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo];
 {/* --- 2. FILA ORIGINAL DE LA LAPTOP (Normal para el resto, oculta para ASUS cerrados) --- */}
 {estaExpandido && mostrarFila && (
   <tr style={{ backgroundColor: 'transparent' }}>
-                  <td style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8' }}>{index + 1}</td>
+                  <td style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8' }}>{globalIndex + 1}</td>
                   <td style={estiloCelda}>{item.fecha}</td>
                   {!esVendedor && <td style={{ ...estiloCelda, color: '#60a5fa' }}>
                     {typeof (item.responsable || item.vendedor) === 'object'
@@ -644,11 +691,38 @@ const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo];
               )} {/* <-- CIERRE DEL DESPLEGABLE */}
         </React.Fragment>
       );
-    });
-  })()}
-          </tbody>
+    })}
+            </tbody>
+          );
+        }, [datosFiltrados, diasExpandidos, modelosExpandidos, esVendedor, esSuperAdmin, laptops, currentPage])}
         </table>
       </div>
+      {/* --- INICIO: CONTROLES DE PAGINACIÓN --- */}
+      {Math.ceil(datosFiltrados.length / itemsPerPage) > 1 && (
+        <div className="paginacion-container" style={{ marginTop: '20px' }}>
+          <span className="paginacion-info">
+            Mostrando {Math.min(startIndex + 1, datosFiltrados.length)}-{Math.min(startIndex + itemsPerPage, datosFiltrados.length)} de {datosFiltrados.length} registros
+          </span>
+          <div className="paginacion-botones">
+            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+              « Primero
+            </button>
+            <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+              ‹ Anterior
+            </button>
+            <span className="paginacion-pagina-actual">
+              Página {currentPage} de {Math.ceil(datosFiltrados.length / itemsPerPage)}
+            </span>
+            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(datosFiltrados.length / itemsPerPage)))} disabled={currentPage === Math.ceil(datosFiltrados.length / itemsPerPage)}>
+              Siguiente ›
+            </button>
+            <button onClick={() => setCurrentPage(Math.ceil(datosFiltrados.length / itemsPerPage))} disabled={currentPage === Math.ceil(datosFiltrados.length / itemsPerPage)}>
+              Último »
+            </button>
+          </div>
+        </div>
+      )}
+      {/* --- FIN: CONTROLES DE PAGINACIÓN --- */}
     </div>
   );
 };

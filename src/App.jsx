@@ -117,7 +117,7 @@ const [usuarioPendiente, setUsuarioPendiente] = useState(null);
   const [mesFormateo, setMesFormateo] = useState('');
   const [anioFormateo, setAnioFormateo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 100;
+  const itemsPerPage = 50;
 
   const [form, setForm] = useState({
     marca: '', modelo: '', precio: '', precio_costo: '', serial: '', 
@@ -1018,15 +1018,30 @@ const laptopsFiltradas = laptops.filter(lap => {
   return true; 
 });
 
-// --- Lógica de paginación ---
-const totalPages = Math.ceil(laptopsFiltradas.length / itemsPerPage);
-const paginatedLaptops = laptopsFiltradas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // --- Lógica de ordenamiento y paginación para ALMACÉN ---
+  const laptopsOrdenadas = useMemo(() => {
+    return [...laptopsFiltradas].sort((a, b) => {
+      const obtenerTimestamp = (fechaStr) => {
+        if (!fechaStr || typeof fechaStr !== 'string') return 0;
+        const partes = fechaStr.split('/');
+        if (partes.length !== 3) return 0;
+        const fecha = new Date(partes[2], partes[1] - 1, partes[0]);
+        return fecha.getTime();
+      };
+      const fechaA = obtenerTimestamp(a.fechaIngreso || a.fecha);
+      const fechaB = obtenerTimestamp(b.fechaIngreso || b.fecha);
+      return fechaB - fechaA; // De más reciente a más antiguo
+    });
+  }, [laptopsFiltradas]);
 
-const handlePageChange = (page) => {
-  if (page >= 1 && page <= totalPages) {
-    setCurrentPage(page);
-  }
-};
+  const totalPages = Math.ceil(laptopsOrdenadas.length / itemsPerPage);
+  const paginatedLaptops = laptopsOrdenadas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
 // --- CÁLCULO DE TOTALES (SOLO ADMINS) ---
 // Estos cálculos se ejecutan sobre el resultado ya filtrado
@@ -1868,7 +1883,7 @@ if (!autenticado) {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={handlePageChange}
-              totalItems={laptopsFiltradas.length}
+              totalItems={laptopsOrdenadas.length}
               itemsPerPage={itemsPerPage}
             />
           </div>
@@ -2025,7 +2040,7 @@ if (!autenticado) {
               </div>
             </div>
             <HojaReportes 
-              laptops={paginatedLaptops} 
+              laptops={laptopsFiltradas} 
               usuarioLogueado={usuarioLogueado}
               activarEdicion={activarEdicion}
               setModalImagen={setModalImagen}
@@ -2034,13 +2049,6 @@ if (!autenticado) {
               eliminarProducto={manejarEliminar}
               tienePermiso={tienePermiso}
               iniciarEscaneo={iniciarEscaneo}
-            />
-            <Paginacion
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              totalItems={laptopsFiltradas.length}
-              itemsPerPage={itemsPerPage}
             />
           </div>
         )}

@@ -23,8 +23,10 @@ const VentasView = ({
   const [cargando, setCargando] = useState(false);
   const [busquedaVentas, setBusquedaVentas] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("");
+  const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
+  const [filtroTiempo, setFiltroTiempo] = useState("TODAS");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 100;
+  const itemsPerPage = 50;
   const [laptopsSeleccionadas, setLaptopsSeleccionadas] = useState([]);
   const [equipoDetalle, setEquipoDetalle] = useState(null);
   const [mostrarInforme, setMostrarInforme] = useState(false);
@@ -68,6 +70,8 @@ const VentasView = ({
   const limpiarFiltros = () => {
     setBusquedaVentas("");
     setFiltroFecha("");
+    setFiltroVendedor("TODOS");
+    setFiltroTiempo("TODAS");
   };
 
   // Para alternar la selección de un equipo
@@ -275,13 +279,47 @@ const VentasView = ({
 
     if (!estaEnStock) return false;
 
+    // Filtro por Vendedor (movido desde AlmacenTabla)
+    const nombreVendedor = String(lap.responsable || lap.vendedor || "").toUpperCase();
+    const pasaVendedor = filtroVendedor === "TODOS" || nombreVendedor.includes(filtroVendedor);
+    if (!pasaVendedor) return false;
+
+    // Filtro por Tiempo (movido desde AlmacenTabla)
+    if (filtroTiempo !== "TODAS") {
+      const fechaStr = lap.fechaIngreso || lap.fecha || "";
+      const [diaStr, mesStr, anioStr] = fechaStr.split('/');
+      
+      if (diaStr && mesStr && anioStr) {
+        const dia = parseInt(diaStr, 10);
+        const mes = parseInt(mesStr, 10);
+        const anio = parseInt(anioStr, 10);
+        const hoy = new Date();
+
+        if (filtroTiempo === "HOY") {
+          if (dia !== hoy.getDate() || mes !== (hoy.getMonth() + 1) || anio !== hoy.getFullYear()) return false;
+        } 
+        else if (filtroTiempo === "ESTE_ANIO") {
+          if (anio !== 2026) return false;
+        }
+      } else {
+        return false; // Si no hay fecha válida, no pasa el filtro de tiempo
+      }
+    }
+
+    // Filtro por fecha exacta (calendario de día)
     if (filtroFecha) {
       const [year, month, day] = filtroFecha.split('-');
-      const f1 = `${parseInt(day)}/${parseInt(month)}/${year}`;
-      const f2 = `${day}/${month}/${year}`;
+      // Normalizamos la fecha del input para que coincida con el formato DD/MM/YYYY
+      // Aseguramos que no haya ceros a la izquierda para la comparación
+      const f1 = `${parseInt(day, 10)}/${parseInt(month, 10)}/${year}`;
+
+      // También creamos una versión con ceros por si el formato en la BD es estricto
+      const pad = (num) => String(num).padStart(2, '0');
+      const f2 = `${pad(day)}/${pad(month)}/${year}`;
 
       const fechaParaFiltrar = lap.fechaIngreso || lap.fecha;
 
+      // Comparamos con ambos formatos por seguridad
       if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
         return false;
       }
@@ -307,10 +345,30 @@ const VentasView = ({
     )
   , [laptops]);
 
+  // Ordenamiento cronológico ANTES de la paginación
+  const ventasOrdenadas = useMemo(() => {
+    return [...ventasFiltradas].sort((a, b) => {
+      const obtenerTimestamp = (fechaStr) => {
+        if (!fechaStr || typeof fechaStr !== 'string') return 0;
+        const partes = fechaStr.split('/');
+        if (partes.length !== 3) return 0; // Formato no válido
+        // new Date(año, mes - 1, día) para evitar problemas de zona horaria con parse
+        const fecha = new Date(partes[2], partes[1] - 1, partes[0]);
+        return fecha.getTime();
+      };
+
+      // Usamos fechaIngreso o fecha, la que exista.
+      const fechaA = obtenerTimestamp(a.fechaIngreso || a.fecha);
+      const fechaB = obtenerTimestamp(b.fechaIngreso || b.fecha);
+
+      return fechaB - fechaA; // De más reciente a más antiguo
+    });
+  }, [ventasFiltradas]);
+
   // Resetear paginación al cambiar filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [busquedaVentas, filtroFecha]);
+  }, [busquedaVentas, filtroFecha, filtroVendedor, filtroTiempo]);
 
   return (
     <div className="ventas-view-container fade-in">
@@ -321,15 +379,55 @@ const VentasView = ({
             <RotateCcw size={16} /> Ver Todo
           </button>
 
-          <div className="calendar-box-ventas">
-            <input
-              type="date"
-              value={filtroFecha}
-              onChange={(e) => setFiltroFecha(e.target.value)}
-              className="input-calendar-ventas"
-            />
-          </div>
+          {/* --- FILTROS MOVIDOS DESDE ALMACENTABLA --- */}
+          <select 
+            value={filtroVendedor}
+            onChange={(e) => setFiltroVendedor(e.target.value)}
+            className="select-filtro-ventas"
+          >
+            <option value="TODOS">👤 Todos los Usuarios</option>
+            <option value="LEONIDAS">Leonidas</option>
+            <option value="CRISTOFER">Cristofer</option>
+            <option value="DAVID">David</option>
+            <option value="YAEL">Yael</option>
+            <option value="PERSONAL ADMINISTRADOR">Administrador</option>
+          </select>
 
+          <select 
+            value={filtroTiempo}
+            onChange={(e) => {
+              setFiltroTiempo(e.target.value);
+              // Limpiamos el filtro de fecha si se elige algo que no sea por día
+              if (e.target.value !== 'DIA') {
+                setFiltroFecha('');
+              }
+            }}
+            className="select-filtro-ventas"
+          >
+            <option value="TODAS">📅 Todas las Fechas</option>
+            <option value="HOY">📅 Hoy</option>
+            <option value="ESTE_ANIO">📅 Este Año (2026)</option>
+            <option value="DIA">📅 Elegir Día...</option>
+          </select>
+
+          {/* El calendario de día solo aparece si se elige "Elegir Día..." */}
+          {filtroTiempo === 'DIA' && (
+            <div className="calendar-box-ventas">
+              <input
+                type="date"
+                value={filtroFecha}
+                onChange={(e) => setFiltroFecha(e.target.value)}
+                className="input-calendar-ventas"
+              />
+            </div>
+          )}
+
+          <button 
+            className="btn-excel-download" 
+            style={{ height: '40px', display: 'flex', alignItems: 'center', cursor: 'not-allowed', background: '#334155' }}
+          >
+            📥 Descargar ({ventasOrdenadas.length})
+          </button>
           <div className="search-box-ventas">
             {busquedaVentas === "" && (
               <Search size={18} className="search-icon" />
@@ -386,7 +484,7 @@ const VentasView = ({
       )}
       <div className="table-wrapper-global">
         <AlmacenTabla
-          laptops={ventasFiltradas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+          laptops={ventasOrdenadas.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
           usuarioLogueado={usuarioLogueado}
           setModalImagen={setModalImagen}
           onVenderClick={manejarVentaProxima}
@@ -395,13 +493,14 @@ const VentasView = ({
           laptopsSeleccionadas={laptopsSeleccionadas}
           toggleSeleccion={toggleSeleccion}
           modoVentas={true}
+          busqueda={busquedaVentas}
           tienePermiso={tienePermiso}
         />
       </div>
-      {Math.ceil(ventasFiltradas.length / itemsPerPage) > 1 && (
+      {Math.ceil(ventasOrdenadas.length / itemsPerPage) > 1 && (
         <div className="paginacion-container">
           <span className="paginacion-info">
-            Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, ventasFiltradas.length)}-{Math.min(currentPage * itemsPerPage, ventasFiltradas.length)} de {ventasFiltradas.length} registros
+            Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, ventasOrdenadas.length)}-{Math.min(currentPage * itemsPerPage, ventasOrdenadas.length)} de {ventasOrdenadas.length} registros
           </span>
           <div className="paginacion-botones">
             <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
@@ -411,12 +510,12 @@ const VentasView = ({
               ‹ Anterior
             </button>
             <span className="paginacion-pagina-actual">
-              Página {currentPage} de {Math.ceil(ventasFiltradas.length / itemsPerPage)}
+              Página {currentPage} de {Math.ceil(ventasOrdenadas.length / itemsPerPage)}
             </span>
-            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(ventasFiltradas.length / itemsPerPage)))} disabled={currentPage === Math.ceil(ventasFiltradas.length / itemsPerPage)}>
+            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(ventasOrdenadas.length / itemsPerPage)))} disabled={currentPage === Math.ceil(ventasOrdenadas.length / itemsPerPage)}>
               Siguiente ›
             </button>
-            <button onClick={() => setCurrentPage(Math.ceil(ventasFiltradas.length / itemsPerPage))} disabled={currentPage === Math.ceil(ventasFiltradas.length / itemsPerPage)}>
+            <button onClick={() => setCurrentPage(Math.ceil(ventasOrdenadas.length / itemsPerPage))} disabled={currentPage === Math.ceil(ventasOrdenadas.length / itemsPerPage)}>
               Último »
             </button>
           </div>

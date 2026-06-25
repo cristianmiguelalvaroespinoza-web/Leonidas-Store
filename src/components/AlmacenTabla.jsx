@@ -17,87 +17,25 @@ const AlmacenTabla = ({
   toggleSeleccion,
   tienePermiso // <-- NUEVA PROP
 }) => {
-  // --- NUEVO ESTADO PARA FILTRAR POR VENDEDOR ---
-  const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
-  const [filtroTiempo, setFiltroTiempo] = useState("TODAS"); // <-- NUEVO ESTADO
-  const [filtroFecha, setFiltroFecha] = useState(""); // <-- ESTADO PARA EL CALENDARIO DE MESES
-// Memoria para saber qué días están desplegados
   const [diasExpandidos, setDiasExpandidos] = React.useState({});
   
   const toggleDia = (dia) => {
-    setDiasExpandidos(prev => ({ ...prev, [dia]: !prev[dia] }));
+    setDiasExpandidos(prev => ({ 
+      ...prev, 
+      [dia]: prev[dia] !== false ? false : true 
+    }));
   };
   
   const puedeEditar = (item) => {
-    // Un super_admin siempre puede. Para los demás, se verifica el permiso.
     if (usuarioLogueado?.rol === 'super_admin') return true;
     return tienePermiso && tienePermiso('EDITAR_REGISTRO');
   };
 
   const puedeEliminar = (item) => {
-    // Un super_admin siempre puede. Para los demás, se verifica el permiso.
     if (usuarioLogueado?.rol === 'super_admin') return true;
     return tienePermiso && tienePermiso('ELIMINAR_REGISTRO');
   }
 
-// --- LÓGICA DE FILTRADO ACTUALIZADA (TEXTO + VENDEDOR + TIEMPO) ---
-  const laptopsFiltradas = laptops.filter(l => {
-    // 1. Filtro por Vendedor
-    const nombreVendedor = String(l.responsable || l.vendedor || "").toUpperCase();
-    const pasaVendedor = filtroVendedor === "TODOS" || nombreVendedor.includes(filtroVendedor);
-    if (!pasaVendedor) return false;
-
-    // 2. Filtro por Tiempo (ACTUALIZADO PARA MINI CALENDARIO)
-    if (filtroTiempo !== "TODAS") {
-      const fechaStr = l.fecha || "";
-      const [diaStr, mesStr, anioStr] = fechaStr.split('/');
-      
-      if (!diaStr || !mesStr || !anioStr) return false;
-
-      const dia = parseInt(diaStr, 10);
-      const mes = parseInt(mesStr, 10);
-      const anio = parseInt(anioStr, 10);
-
-      const hoy = new Date();
-
-      if (filtroTiempo === "HOY") {
-        if (dia !== hoy.getDate() || mes !== (hoy.getMonth() + 1) || anio !== hoy.getFullYear()) return false;
-      } 
-      else if (filtroTiempo === "ESTE_ANIO") {
-        if (anio !== 2026) return false;
-      } 
-      else if (filtroTiempo === "ELEGIR_MES") {
-        // Si el usuario aún no selecciona un mes en el calendario, no filtramos nada
-        if (!filtroFecha) return true; 
-        
-        // El input type="month" devuelve "YYYY-MM" (ej: "2026-05")
-        const [anioSeleccionado, mesSeleccionado] = filtroFecha.split('-');
-        
-        // Comparamos el mes y año de la laptop con el del calendario
-        if (anio !== parseInt(anioSeleccionado, 10) || mes !== parseInt(mesSeleccionado, 10)) {
-          return false;
-        }
-      }
-    }
-
-    // 3. Filtro por Texto (Búsqueda)
-    const texto = busqueda.toLowerCase().trim();
-    if (!texto) return true;
-
-    const marca = (l.marca || "").toLowerCase();
-    const modelo = (l.modelo || "").toLowerCase();
-    const serial = (l.serial || "").toLowerCase();
-    const vendedor = nombreVendedor.toLowerCase();
-    const procesador = (l.procesador || "").toLowerCase();
-    const generacion = (l.generacion || l.gen || "").toLowerCase();
-    const ram = (l.ram || "").toLowerCase();
-    const disco = (l.almacenamiento || l.disco || "").toLowerCase();
-    const gpu = (l.gpu || "").toLowerCase();
-
-    return marca.includes(texto) || modelo.includes(texto) || serial.includes(texto) || 
-           vendedor.includes(texto) || procesador.includes(texto) || generacion.includes(texto) || 
-           ram.includes(texto) || disco.includes(texto) || gpu.includes(texto);
-  });
  const descargarExcel = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
@@ -140,7 +78,7 @@ const worksheet = workbook.addWorksheet(nombreHoja);
       });
 
       // 3. Procesar las filas y pintarlas (Fondo gris oscuro, letras blancas)
-      laptopsFiltradas.forEach((l, i) => {
+      laptops.forEach((l, i) => {
         const rowData = {
           index: i + 1,
           fecha: l.fecha,
@@ -194,11 +132,6 @@ saveAs(blob, `LeonidasStore_${prefijoArchivo}_${fechaLimpia}.xlsx`);
     borderBottom: '1px solid #1e293b' 
   };
 
-  const laptopsOrdenadas = [...laptopsFiltradas].sort((a, b) => {
-    const fechaA = new Date(a.fecha.split('/').reverse().join('-'));
-    const fechaB = new Date(b.fecha.split('/').reverse().join('-'));
-    return fechaB - fechaA;
-  });
   // 👇 AQUÍ PEGAS LA FUNCIÓN, JUSTO ANTES DEL RETURN 👇
 const obtenerMesYAnio = (fechaString) => {
   if (!fechaString) return 'FECHA DESCONOCIDA';
@@ -209,128 +142,6 @@ const obtenerMesYAnio = (fechaString) => {
 
   return (
     <>
-      <div className="excel-header-actions" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '1.5rem', // Aumentamos un poco el margen
-        flexWrap: 'wrap',
-        gap: '10px' 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <h2 style={{ 
-  color: '#fff', 
-  margin: 0, 
-  display: 'flex', 
-  flexDirection: 'row', 
-  alignItems: 'center', 
-  flexWrap: 'nowrap', 
-  whiteSpace: 'nowrap', 
-  gap: '10px' 
-}}>
-  📊 {modoVentas ? "TABLA DE VENTAS" : "INVENTARIO"}
-</h2>
-          
-          {/* --- SELECTOR DE VENDEDOR CORREGIDO Y ALINEADO --- */}
-          <select 
-            value={filtroVendedor}
-            onChange={(e) => setFiltroVendedor(e.target.value)}
-            style={{
-    backgroundColor: '#1e293b',
-    color: '#e2e8f0',
-    border: '1px solid #334155',
-    borderRadius: '8px',
-    padding: '0 35px 0 12px', // Más espacio a la derecha para la flecha
-    fontSize: '13px',         // Subimos un punto para que se vea mejor
-    cursor: 'pointer',
-    outline: 'none',         // Subimos de 36px a 40px para que no corte la letra
-    height: '45px',           // Altura reducida para que sea más delgado
-    lineHeight: '20px',       // Centra el texto verticalmente en la nueva altura
-    width: '200px',          // Ancho original restaurado
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 12px center',
-    backgroundSize: '16px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    verticalAlign: 'middle'   // Alineación extra
-  }}
->
-  <option value="TODOS">👤 TODOS LOS USUARIOS</option>
-  <option value="LEONIDAS">LEONIDAS</option>
-  <option value="CRISTOFER">CRISTOFER</option>
-  <option value="DAVID">DAVID</option>
-  <option value="YAEL">YAEL</option>
-  <option value="PERSONAL ADMINISTRADOR">ADMINISTRADOR</option>
-</select>
-{/* --- CONTENEDOR: SELECTOR + MINI CALENDARIO DE MESES --- */}
-      <div style={{ display: 'flex', gap: '10px' }}>
-        
-        {/* 1. SELECTOR PRINCIPAL */}
-        <select 
-          value={filtroTiempo}
-          onChange={(e) => setFiltroTiempo(e.target.value)}
-          style={{
-            backgroundColor: '#1e293b',
-            color: '#ffffff',
-            border: '1px solid #334155',
-            borderRadius: '8px',
-            padding: '0 35px 0 12px',
-            fontSize: '13px',
-            cursor: 'pointer',
-            outline: 'none',
-            height: '40px',
-            minWidth: '180px',
-            appearance: 'none',
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 12px center',
-            backgroundSize: '16px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-          }}
-        >
-          <option value="TODAS" style={{ background: '#1e293b', color: '#fff' }}>📅 TODAS LAS FECHAS</option>
-          <option value="HOY" style={{ background: '#1e293b', color: '#fff' }}>📅 HOY</option>
-          <option value="ESTE_ANIO" style={{ background: '#1e293b', color: '#fff' }}>📅 2026</option>
-          <option value="ELEGIR_MES" style={{ background: '#1e293b', color: '#fff' }}>📅 ELEGIR MES...</option>
-        </select>
-
-        {/* 2. CALENDARIO DE MESES (Aparece SOLO si se selecciona "ELEGIR_MES") */}
-        {filtroTiempo === 'ELEGIR_MES' && (
-          <input 
-            type="month"
-            min="2026-01"
-            max="2026-12"
-            value={filtroFecha}
-            onChange={(e) => setFiltroFecha(e.target.value)}
-            style={{
-              backgroundColor: '#1e293b',
-              color: '#ffffff',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '0 12px',
-              fontSize: '13px',
-              cursor: 'pointer',
-              outline: 'none',
-              height: '40px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              colorScheme: 'dark'
-            }}
-          />
-        )}
-      </div>
-</div>
-        <button 
-          className="btn-excel-download" 
-          onClick={descargarExcel}
-          style={{ height: '36px', display: 'flex', alignItems: 'center' }} // Alineado con el select
-        >
-          📥 Descargar Reporte ({laptopsFiltradas.length})
-        </button>
-      </div>
-
       <div className="table-responsive-wrapper">
         <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0f172a' }}>
           <thead>
@@ -362,7 +173,7 @@ const obtenerMesYAnio = (fechaString) => {
     let ultimoMesVisto = null;
     let ultimoDiaVisto = null; // <-- Memoria para los días
 
-    return laptopsOrdenadas.map((l, i) => {
+    return laptops.map((l, i) => {
       const mesActual = obtenerMesYAnio(l.fecha);
       const diaActual = l.fecha;
       
@@ -373,7 +184,7 @@ const obtenerMesYAnio = (fechaString) => {
       if (mostrarEncabezadoDia) ultimoDiaVisto = diaActual;
 
       // Consultamos a nuestra "memoria" si este día en específico fue clickeado
-      const estaExpandido = diasExpandidos[diaActual];
+      const estaExpandido = diasExpandidos[diaActual] !== false;
 
       return (
         <React.Fragment key={l.fireId || i}>
