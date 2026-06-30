@@ -434,21 +434,73 @@ const VentasView = ({
 
   // Ordenamiento cronológico ANTES de la paginación
   const ventasOrdenadas = useMemo(() => {
+    // Esta función es más robusta para leer fechas en formatos DD/MM/YYYY o YYYY-MM-DD
+    // y también considera la hora para un ordenamiento más preciso.
+    const obtenerFechaYHoraCompleta = (item) => {
+      const fechaStr = item.fechaIngreso || item.fecha;
+      const horaStr = item.hora_venta || item.hora; // Asumimos que podría existir una hora
+
+      if (!fechaStr || typeof fechaStr !== 'string') return null;
+
+      let dia, mes, anio;
+      const separador = fechaStr.includes('/') ? '/' : fechaStr.includes('-') ? '-' : null;
+
+      if (!separador) { // Si no hay separador, podría ser un formato inválido
+          const d = new Date(fechaStr);
+          if (!isNaN(d.getTime())) return d;
+          return null;
+      }
+
+      const partes = fechaStr.split(separador);
+      if (partes.length !== 3) return null;
+
+      // Formato YYYY-MM-DD
+      if (separador === '-' && partes[0].length === 4) {
+        anio = parseInt(partes[0], 10);
+        mes = parseInt(partes[1], 10);
+        dia = parseInt(partes[2], 10);
+      } 
+      // Formato DD/MM/YYYY
+      else if (partes[2].length === 4) {
+        dia = parseInt(partes[0], 10);
+        mes = parseInt(partes[1], 10);
+        anio = parseInt(partes[2], 10);
+      } else {
+        return null; // Formato no reconocido
+      }
+
+      if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return null;
+
+      let horas = 0, minutos = 0;
+      if (horaStr) {
+        const match12h = horaStr.toLowerCase().match(/(\d+):(\d+)\s*([ap])\.?m?\.?/);
+        if (match12h) {
+          horas = parseInt(match12h[1], 10);
+          minutos = parseInt(match12h[2], 10);
+          const periodo = match12h[3];
+          if (periodo === 'p' && horas < 12) horas += 12;
+          if (periodo === 'a' && horas === 12) horas = 0;
+        } else {
+          const match24h = horaStr.match(/(\d+):(\d+)/);
+          if (match24h) {
+            horas = parseInt(match24h[1], 10);
+            minutos = parseInt(match24h[2], 10);
+          }
+        }
+      }
+      // El mes en new Date() es 0-indexado (0-11)
+      return new Date(anio, mes - 1, dia, horas, minutos);
+    };
+
     return [...ventasFiltradas].sort((a, b) => {
-      const obtenerTimestamp = (fechaStr) => {
-        if (!fechaStr || typeof fechaStr !== 'string') return 0;
-        const partes = fechaStr.split('/');
-        if (partes.length !== 3) return 0; // Formato no válido
-        // new Date(año, mes - 1, día) para evitar problemas de zona horaria con parse
-        const fecha = new Date(partes[2], partes[1] - 1, partes[0]);
-        return fecha.getTime();
-      };
+      const fechaA = obtenerFechaYHoraCompleta(a);
+      const fechaB = obtenerFechaYHoraCompleta(b);
 
-      // Usamos fechaIngreso o fecha, la que exista.
-      const fechaA = obtenerTimestamp(a.fechaIngreso || a.fecha);
-      const fechaB = obtenerTimestamp(b.fechaIngreso || b.fecha);
+      // Si alguna fecha no es válida, la mandamos al final.
+      if (!fechaA) return 1;
+      if (!fechaB) return -1;
 
-      return fechaB - fechaA; // De más reciente a más antiguo
+      return fechaB.getTime() - fechaA.getTime(); // De más reciente a más antiguo
     });
   }, [ventasFiltradas]);
 

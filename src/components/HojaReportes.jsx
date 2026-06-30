@@ -20,10 +20,6 @@ const HojaReportes = ({ laptops, usuarioLogueado, activarEdicion, setModalImagen
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
   const [filtroTiempo, setFiltroTiempo] = useState("TODAS"); // <-- AÑADE ESTA LÍNEA
 
-  // --- INICIO: LÓGICA DE PAGINACIÓN RECONSTRUIDA ---
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50; // Puedes ajustar esto
-
 const [diasExpandidos, setDiasExpandidos] = useState({});
 
   const toggleDia = (dia) => {
@@ -61,11 +57,6 @@ const toggleModelo = (clave) => {
     setFiltroVendedor('TODOS'); // Limpiamos también el vendedor
     setFiltroTiempo('TODAS');
   };
-
-  // Efecto para resetear la paginación cuando los filtros cambian
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [busqueda, fechaFiltro, filtroEstado, filtroVendedor, filtroTiempo]);
 
  // --- LÓGICA DE FILTRADO ACTUALIZADA ---
   const datosFiltrados = (laptops || []).filter(d => {
@@ -250,8 +241,6 @@ const toggleModelo = (clave) => {
   const puedeEliminar = (item) => {
     return tienePermiso && tienePermiso('ELIMINAR_REGISTRO');
   };
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
 
   return (
     <div className={styles.reportesContainer}>
@@ -502,129 +491,84 @@ const toggleModelo = (clave) => {
             </tr>
           </thead>
         {useMemo(() => {
-          const obtenerFechaYHoraCompleta = (item) => {
-      const fechaStr = item.fecha_venta || item.fecha;
-      const horaStr = item.hora_venta || item.hora;
+          // FUNCIÓN DE NORMALIZACIÓN SEGURA Y ÚNICA PARA TODO EL COMPONENTE
+          const obtenerFechaEstandar = (item) => {
+            if (item.fechaCreacion?.toDate) {
+              const d = item.fechaCreacion.toDate();
+              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            const stringFecha = String(item.fecha_venta || item.fecha || '');
+            const partes = stringFecha.split(/[-/]/); // Soporta "/" y "-"
+            if (partes.length === 3) {
+              let dia, mes, anio;
+              if (partes[2].length === 4) { // Formato DD/MM/YYYY
+                dia = partes[0]; mes = partes[1]; anio = partes[2];
+              } else if (partes[0].length === 4) { // Formato YYYY-MM-DD
+                anio = partes[0]; mes = partes[1]; dia = partes[2];
+              }
+              if (anio && mes && dia) {
+                return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+              }
+            }
+            return '1970-01-01'; // Respaldo para evitar nulls
+          };
 
-      if (!fechaStr || typeof fechaStr !== 'string') return null;
-
-      let dia, mes, anio;
-      const separador = fechaStr.includes('/') ? '/' : fechaStr.includes('-') ? '-' : null;
-
-      if (!separador) return null;
-
-      const partes = fechaStr.split(separador);
-      if (partes.length !== 3) return null;
-
-      // Prioriza YYYY-MM-DD si el separador es '-' y la primera parte tiene 4 dígitos
-      if (separador === '-' && partes[0].length === 4) {
-        anio = parseInt(partes[0], 10);
-        mes = parseInt(partes[1], 10);
-        dia = parseInt(partes[2], 10);
-      } 
-      // De lo contrario, asume DD/MM/YYYY o DD-MM-YYYY si la última parte tiene 4 dígitos
-      else if (partes[2].length === 4) {
-        dia = parseInt(partes[0], 10);
-        mes = parseInt(partes[1], 10);
-        anio = parseInt(partes[2], 10);
-      } else {
-        return null; // Formato ambiguo o inválido
-      }
-
-      if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return null;
-
-      let horas = 0, minutos = 0;
-      if (horaStr) {
-        // Intenta parsear formato 12h (ej: "2:30 p.m.")
-        const match12h = horaStr.toLowerCase().match(/(\d+):(\d+)\s*([ap])\.?m?\.?/);
-        if (match12h) {
-          horas = parseInt(match12h[1], 10);
-          minutos = parseInt(match12h[2], 10);
-          const periodo = match12h[3];
-
-          if (periodo === 'p' && horas < 12) horas += 12;
-          if (periodo === 'a' && horas === 12) horas = 0;
-        } else {
-          // Si no, intenta parsear formato 24h (ej: "14:30")
-          const match24h = horaStr.match(/(\d+):(\d+)/);
-          if (match24h) {
-            horas = parseInt(match24h[1], 10);
-            minutos = parseInt(match24h[2], 10);
-          }
-        }
-      }
-      return new Date(anio, mes - 1, dia, horas, minutos);
-    };
-
-          // 1. ORDENAMIENTO GLOBAL
+          // 1. ORDENAMIENTO DE DOS NIVELES COHERENTE
           const datosOrdenados = [...datosFiltrados].sort((a, b) => {
-      const fechaA = obtenerFechaYHoraCompleta(a);
-      const fechaB = obtenerFechaYHoraCompleta(b);
-      if (!fechaA) return 1;
-      if (!fechaB) return -1;
-      return fechaB.getTime() - fechaA.getTime(); // Orden descendente (más reciente primero)
-    });
+            const fechaA = obtenerFechaEstandar(a);
+            const fechaB = obtenerFechaEstandar(b);
 
-          // 2. PAGINACIÓN (se aplica sobre la lista ya ordenada)
-          const datosPaginados = datosOrdenados.slice(startIndex, startIndex + itemsPerPage);
+            if (fechaB !== fechaA) {
+              return fechaB.localeCompare(fechaA); // Ordena los días descendente
+            }
+
+            // Desempate por hora exacta
+            const tiempoA = a.fechaCreacion?.toDate ? a.fechaCreacion.toDate().getTime() : 0;
+            const tiempoB = b.fechaCreacion?.toDate ? b.fechaCreacion.toDate().getTime() : 0;
+            return tiempoB - tiempoA;
+          });
 
           return (
             <tbody>
-              {datosPaginados.map((item, index) => {
-      // --- LÓGICA DE ENCABEZADOS CORREGIDA ---
-      // Usamos un índice global para comparar con el elemento anterior en la lista COMPLETA
-      const globalIndex = startIndex + index;
-      const itemAnterior = globalIndex > 0 ? datosOrdenados[globalIndex - 1] : null;
+              {datosOrdenados.map((item, index) => {
+                const itemAnterior = index > 0 ? datosOrdenados[index - 1] : null;
 
-      const fechaRealParaAgrupar = item.fecha_venta || item.fecha;
-      const fechaAnteriorParaAgrupar = itemAnterior ? (itemAnterior.fecha_venta || itemAnterior.fecha) : null;
+                // Extraer strings normalizados de comparación de forma idéntica al sort
+                const fechaActualNorm = obtenerFechaEstandar(item);
+                const fechaAnteriorNorm = itemAnterior ? obtenerFechaEstandar(itemAnterior) : null;
 
-      const mesActual = obtenerMesYAnio(fechaRealParaAgrupar);
-      const mesAnterior = itemAnterior ? obtenerMesYAnio(fechaAnteriorParaAgrupar) : null;
+                // Generar etiquetas legibles para la interfaz (DD/MM/AAAA)
+                const formatearA_Interfaz = (isoString) => {
+                  if (isoString === '1970-01-01') return 'FECHA DESCONOCIDA';
+                  const [a, m, d] = isoString.split('-');
+                  return `${parseInt(d, 10)}/${parseInt(m, 10)}/${a}`;
+                };
 
-      const diaActual = fechaRealParaAgrupar;
-      
-      const mostrarEncabezadoMes = String(mesActual) !== String(mesAnterior);
+                const diaActual = formatearA_Interfaz(fechaActualNorm);
+                const mesActual = obtenerMesYAnio(diaActual);
+                const mesAnterior = itemAnterior ? obtenerMesYAnio(formatearA_Interfaz(fechaAnteriorNorm)) : null;
 
-      // --- LÓGICA DE AGRUPACIÓN POR DÍA A PRUEBA DE ERRORES ---
-      // En lugar de comparar el texto "24/06/2026", que puede fallar,
-      // normalizamos ambas fechas a un formato estándar y comparamos eso.
-      const normalizarFecha = (fechaStr) => {
-        if (!fechaStr) return null;
-        const separador = fechaStr.includes('/') ? '/' : '-';
-        const partes = fechaStr.split(separador);
-        if (partes.length !== 3) return null;
-        // Reconstruimos a YYYY-MM-DD para una comparación segura
-        return `${partes[2]}-${String(partes[1]).padStart(2, '0')}-${String(partes[0]).padStart(2, '0')}`;
-      };
+                const mostrarEncabezadoMes = mesActual !== mesAnterior;
+                const mostrarEncabezadoDia = fechaActualNorm !== fechaAnteriorNorm;
 
-      const fechaNormalizadaActual = normalizarFecha(diaActual);
-      const fechaNormalizadaAnterior = normalizarFecha(fechaAnteriorParaAgrupar);
-      const mostrarEncabezadoDia = fechaNormalizadaActual !== fechaNormalizadaAnterior;
+                const estaExpandido = diasExpandidos[String(diaActual)] !== false;
 
-      const estaExpandido = diasExpandidos[String(diaActual)] !== false;
+                // --- MOTOR DE MODELOS Y FILAS ORIGINALES INTACTOS ---
+                const estadoStr = (item.estado || "STOCK").toUpperCase();
+                const colorEstado = estadoStr === 'VENDIDO' ? '#ef4444' : 
+                                    estadoStr === 'SEPARADO' ? '#f59e0b' : '#10b981';
+                const tienePrecio = item.precio && Number(item.precio) > 0;
+                const tieneFotos = item.imagenes && item.imagenes.length > 0;
 
-      // --- TUS VARIABLES ORIGINALES INTACTAS ---
-      const estadoStr = (item.estado || "STOCK").toUpperCase();
-      const colorEstado = estadoStr === 'VENDIDO' ? '#ef4444' : 
-                          estadoStr === 'SEPARADO' ? '#f59e0b' : '#10b981';
-      const tienePrecio = item.precio && Number(item.precio) > 0;
-      const tieneFotos = item.imagenes && item.imagenes.length > 0;
-// --- NUESTRO MOTOR DE MODELOS (ESTRICTO: SOLO ASUS E410KA-CL464) ---
-const marcaLimpia = item.marca ? String(item.marca).toUpperCase().trim() : '';
-const modeloLimpio = item.modelo ? String(item.modelo).toUpperCase().trim() : '';
+                const marcaLimpia = item.marca ? String(item.marca).toUpperCase().trim() : '';
+                const modeloLimpio = item.modelo ? String(item.modelo).toUpperCase().trim() : '';
+                const esModeloAgrupable = marcaLimpia === 'ASUS' && modeloLimpio === 'E410KA-CL464'; 
 
-const esModeloAgrupable = marcaLimpia === 'ASUS' && modeloLimpio === 'E410KA-CL464'; 
+                const claveModelo = `${diaActual}-${item.marca}-${item.modelo}`;
+                const mismoModeloQueAnterior = itemAnterior && itemAnterior.marca === item.marca && itemAnterior.modelo === item.modelo;
 
-const claveModelo = `${fechaRealParaAgrupar}-${item.marca}-${item.modelo}`;
-const itemAnteriorDePagina = index > 0 ? datosPaginados[index - 1] : null; // Para la lógica de agrupación de modelos dentro de la página
-const mismoModeloQueAnterior = itemAnterior && itemAnterior.marca === item.marca && itemAnterior.modelo === item.modelo;
-
-// Solo muestra el título si es EXACTAMENTE ese modelo y el de arriba no era igual
-const mostrarHeaderModelo = esModeloAgrupable && !mismoModeloQueAnterior; 
-// Si NO es ese modelo, la laptop se muestra siempre (normal). Si lo es, depende del clic:
-const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo]; 
-// ------------------------------------------------------------------
+                const mostrarHeaderModelo = esModeloAgrupable && !mismoModeloQueAnterior; 
+                const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo];
 
       return (
         <React.Fragment key={item.fireId || index}>
@@ -671,7 +615,7 @@ const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo];
 {/* --- 2. FILA ORIGINAL DE LA LAPTOP (Normal para el resto, oculta para ASUS cerrados) --- */}
 {estaExpandido && mostrarFila && (
   <tr style={{ backgroundColor: 'transparent' }}>
-                  <td style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8' }}>{globalIndex + 1}</td>
+                  <td style={{ ...estiloCelda, textAlign: 'center', color: '#94a3b8' }}>{index + 1}</td>
                   <td style={estiloCelda}>{item.fecha}</td>
                   {!esVendedor && <td style={{ ...estiloCelda, color: '#60a5fa' }}>
                     {typeof (item.responsable || item.vendedor) === 'object'
@@ -730,35 +674,9 @@ const mostrarFila = !esModeloAgrupable || modelosExpandidos[claveModelo];
     })}
             </tbody>
           );
-        }, [datosFiltrados, diasExpandidos, modelosExpandidos, esVendedor, esSuperAdmin, laptops, currentPage])}
+        }, [datosFiltrados, diasExpandidos, modelosExpandidos, esVendedor, esSuperAdmin, laptops])}
         </table>
       </div>
-      {/* --- INICIO: CONTROLES DE PAGINACIÓN --- */}
-      {Math.ceil(datosFiltrados.length / itemsPerPage) > 1 && (
-        <div className="paginacion-container" style={{ marginTop: '20px' }}>
-          <span className="paginacion-info">
-            Mostrando {Math.min(startIndex + 1, datosFiltrados.length)}-{Math.min(startIndex + itemsPerPage, datosFiltrados.length)} de {datosFiltrados.length} registros
-          </span>
-          <div className="paginacion-botones">
-            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-              « Primero
-            </button>
-            <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-              ‹ Anterior
-            </button>
-            <span className="paginacion-pagina-actual">
-              Página {currentPage} de {Math.ceil(datosFiltrados.length / itemsPerPage)}
-            </span>
-            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(datosFiltrados.length / itemsPerPage)))} disabled={currentPage === Math.ceil(datosFiltrados.length / itemsPerPage)}>
-              Siguiente ›
-            </button>
-            <button onClick={() => setCurrentPage(Math.ceil(datosFiltrados.length / itemsPerPage))} disabled={currentPage === Math.ceil(datosFiltrados.length / itemsPerPage)}>
-              Último »
-            </button>
-          </div>
-        </div>
-      )}
-      {/* --- FIN: CONTROLES DE PAGINACIÓN --- */}
     </div>
   );
 };
