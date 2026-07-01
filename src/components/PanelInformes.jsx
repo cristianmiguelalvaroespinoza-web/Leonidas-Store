@@ -492,11 +492,11 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
   // --- RENDIMIENTO POR VENDEDOR (DINÁMICO) ---
   const rendimientoUsuarios = useMemo(() => {
     const data = {
-      'FINPRO': { cantidad: 0, total: 0, color: '#00ff7f' },
+      'LEONIDAS': { cantidad: 0, total: 0, color: '#00ff7f' },
       'DAVID': { cantidad: 0, total: 0, color: '#3b82f6' },
       'CRISTOFER': { cantidad: 0, total: 0, color: '#0ea5e9' },
       'YAEL': { cantidad: 0, total: 0, color: '#a855f7' },
-      'ADMINISTRADOR': { cantidad: 0, total: 0, color: '#f59e0b' }
+      'PERSONAL ADMINISTRADOR': { cantidad: 0, total: 0, color: '#f59e0b' }
     };
 
     registrosParaTabla.forEach(l => {
@@ -727,7 +727,6 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
             <div className={styles.modalHeader}>
               <h2 className={styles.modalHeaderTitle}><History size={28} /> HISTORIAL DE ACTIVIDAD</h2>
               <p className={styles.modalHeaderSub}>Registro de movimientos en tiempo real</p>
-              <button className={styles.btnCloseTop} onClick={() => setMostrarHistorial(false)}><X /></button>
             </div>
             <div style={{ padding: '20px', maxHeight: '400px', overflowY: 'auto' }}>
               {datosHistorialReal.length > 0 ? (
@@ -739,7 +738,11 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
                         <strong>{reg.estado?.trim().toUpperCase() === 'VENDIDO' ? 'Venta:' : 'Registro:'}</strong> {reg.marca} {reg.modelo}
                       </p>
                     </div>
-                    <span className={styles.vendedorTag} style={{ fontSize: '0.7rem' }}>{reg.responsable || 'LEONIDAS'}</span>
+                    <span className={styles.vendedorTag} style={{ fontSize: '0.7rem' }}>
+                      {typeof reg.responsable === 'object' && reg.responsable !== null
+                        ? reg.responsable.nombre
+                        : (reg.responsable || 'LEONIDAS')}
+                    </span>
                   </div>
                 ))
               ) : (
@@ -792,7 +795,6 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
           <div className={styles.modalPanel} style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h2 className={styles.modalHeaderTitle}><Laptop size={28} /> VENTAS DE {vendedorSeleccionado}</h2>
-              <button className={styles.btnCloseTop} onClick={() => setMostrarModalDetalleVendedor(false)}><X /></button>
             </div>
             <div className={styles.ventasList} style={{ maxHeight: '450px', overflowY: 'auto' }}>
               {laptopsVendedor.map((l, i) => (

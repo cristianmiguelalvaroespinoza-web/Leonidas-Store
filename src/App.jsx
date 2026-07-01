@@ -30,6 +30,7 @@ import {
   guardarProducto, actualizarProducto, eliminarProducto, suscribirseAInventario, enviarInformeEmail,
 } from './services/api';
 import { db } from './firebase';
+import emailjs from '@emailjs/browser';
 import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, writeBatch, setDoc } from "firebase/firestore";
 
 // --- CONFIGURACIÓN DE AVATARES PERSONALIZADOS (LEONIDAS STORE) ---
@@ -280,36 +281,6 @@ const [verPassword, setVerPassword] = useState(false);
     }
   };
 
-
-// ... dentro de tu componente principal App ...
-
-const manejarEnvioFormal = async (datosFiltrados = null) => {
-  // CLAVE: Si vienen datos del filtro (HOY/MES), usamos esos. 
-  // Si no (por si acaso), usa la lista global.
-  const datosAProcesar = datosFiltrados || laptops;
-
-  // Verificamos si hay datos en el paquete filtrado
-  if (!datosAProcesar || datosAProcesar.length === 0) {
-    alert("No hay datos en el periodo seleccionado para generar el PDF.");
-    return;
-  }
-
-  setCargando(true); 
-  
-  try {
-    // IMPORTANTE: Ahora pasamos 'datosAProcesar' al servicio, NO 'laptops'
-    await enviarInformeGmailPDF(datosAProcesar, usuarioLogueado?.nombre || "Admin");
-    
-    alert("✅ ¡Informe Formal enviado con éxito a Gmail!");
-    setMostrarModalInformes(false); 
-  } catch (error) {
-    console.error("Error al enviar el PDF:", error);
-    alert("❌ Hubo un error al generar.");
-  } finally {
-    setCargando(false); 
-  }
-};
-
   const iniciarEscaneo = (target) => {
     setEscaneando(true);
   
@@ -511,11 +482,11 @@ const manejarGeneracionReporte = (formato, config = {}) => {
   // --- DISPARO DE ACCIONES ---
   if (formato === 'pdf') {
     // Pasamos los cálculos adicionales si tu función manejarEnvioFormal los requiere
-    manejarEnvioFormal(filtrados, { inversionTotal, ventaTotal, utilidadNeta });
+    manejarEnvioFormal(filtrados);
   } 
   else if (formato === 'texto') {
     // Pasamos los cálculos al envío de EmailJS
-    enviarInformeDiarioEmailJS(filtrados, { inversionTotal, ventaTotal, utilidadNeta });
+    enviarInformeDiarioEmailJS({ config: { tipo: tipoPeriodo, fecha: fechaPersonalizada } });
   } 
   else if (formato === 'whatsapp') {
     // Lógica de WhatsApp mejorada con los montos de Leonidas Store
@@ -535,112 +506,246 @@ const manejarGeneracionReporte = (formato, config = {}) => {
   }
 };
 
-  const enviarInformeDiarioEmailJS = async (laptopsFiltradas = null) => {
-  // --- BLOQUE DE COMPATIBILIDAD CON EL MODAL ---
-  // Si vienen datos filtrados del modal, los usamos directamente
-  let registradosHoy, vendidosHoy, fechaParaInforme;
+const enviarInformeDiarioEmailJS = async (params = {}) => {
+  const { laptopsFiltradas, config } = params;
 
   if (laptopsFiltradas) {
-    registradosHoy = laptopsFiltradas;
-    // Consideramos vendidos los que están en ese estado dentro de la selección
-    vendidosHoy = laptopsFiltradas.filter(l => l.estado === 'VENDIDO');
-    fechaParaInforme = "Reporte Personalizado";
-  } else {
-    // --- LÓGICA ORIGINAL (No se quita nada) ---
-    if (!fechaConsulta) {
-      return alert("Por favor, selecciona una fecha para el informe.");
+    // --- LÓGICA PARA "ENVIAR GMAIL TABLA" (PLANTILLA DE TABLA) ---
+    if (!CONFIG.EMAILJS_TEMPLATE_ID_TABLA) {
+      alert("Error de configuración: El ID de la plantilla de tabla (EMAILJS_TEMPLATE_ID_TABLA) no está definido en el archivo de configuración.");
+      return;
     }
-    const [year, month, day] = fechaConsulta.split('-');
-    const fechaCalendarioLimpia = `${parseInt(day)}/${parseInt(month)}/${year}`;
-    fechaParaInforme = fechaCalendarioLimpia;
+    setCargando(true);
+    try {
+      // 1. Separar en Stock y Vendidos
+      const stockItems = laptopsFiltradas.filter(l => (l.estado || 'STOCK').toUpperCase() === 'STOCK');
+      const soldItems = laptopsFiltradas.filter(l => l.estado?.toUpperCase() === 'VENDIDO');
 
-    registradosHoy = laptops.filter(l => {
-      if (!l.fecha) return false;
-      const partes = l.fecha.split('/');
-      if (partes.length < 3) return false;
-      const fechaDB = `${parseInt(partes[0])}/${parseInt(partes[1])}/${partes[2]}`;
-      return fechaDB === fechaCalendarioLimpia;
-    });
+      // 2. Generar tabla de STOCK (AHORA AGRUPADA PARA AHORRAR ESPACIO)
+      let tabla_stock_html = '';
+      if (stockItems.length > 0) {
+        const agruparStock = (lista) => {
+          const grupos = {};
+          lista.forEach(l => {
+            const llave = `${l.marca} ${l.modelo}`.trim().toUpperCase();
+            if (!grupos[llave]) grupos[llave] = { ...l, cantidad: 0, seriales: [] };
+            grupos[llave].cantidad += 1;
+            if (l.serial) grupos[llave].seriales.push(l.serial);
+          });
+          return Object.values(grupos).sort((a, b) => a.marca.localeCompare(b.marca));
+        };
+        const stockAgrupado = agruparStock(stockItems);
+        const filasStock = stockAgrupado.map(item => {
+          const marcaModelo = `${item.marca || ''} ${item.modelo || ''}`;
+          const serialesListados = item.seriales.join(', ') || 'S/N';
+          return `<tr style="background-color: #1e293b; color: #e2e8f0;"><td style="padding: 6px; border: 1px solid #334155;">${marcaModelo}</td><td style="padding: 6px; border: 1px solid #334155; font-weight: bold; text-align: center;">${item.cantidad}</td><td style="padding: 6px; border: 1px solid #334155; font-family: monospace; font-size: 10px;">${serialesListados}</td></tr>`;
+        }).join('');
 
-    vendidosHoy = laptops.filter(l => {
-      if (l.estado !== 'VENDIDO') return false;
-      const fVenta = l.fecha_venta || l.fecha;
-      const partes = fVenta.split('/');
-      if (partes.length < 3) return false;
-      const fechaVentaDB = `${parseInt(partes[0])}/${parseInt(partes[1])}/${partes[2]}`;
-      return fechaVentaDB === fechaCalendarioLimpia;
-    });
+        tabla_stock_html = `<tr><td colspan="7" align="center" style="padding: 10px 0 20px 0; border: none;"><font size="5" color="#00ff7f" style="letter-spacing: 1px;"><b>EQUIPOS EN STOCK (LOTES)</b></font></td></tr><tr><td colspan="7" style="padding: 0; border: none;"><table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse: collapse; border: 1px solid #334155; font-size: 10px; text-align: left; color: #ffffff;"><thead><tr bgcolor="#0f172a"><th width="50%"><font color="#00ff7f">MARCA / MODELO</font></th><th width="10%" style="text-align: center;"><font color="#00ff7f">CANT.</font></th><th width="40%"><font color="#00ff7f">N° DE SERIE(S)</font></th></tr></thead><tbody>${filasStock}</tbody></table></td></tr>`;
+      }
+
+      // 3. Generar tabla de VENDIDOS (agrupados por lote)
+      let tabla_vendidos_html = '';
+      if (soldItems.length > 0) {
+        const agruparVendidos = (lista) => {
+          const grupos = {};
+          lista.forEach(l => {
+            const llave = `${l.marca} ${l.modelo}`.trim().toUpperCase();
+            if (!grupos[llave]) grupos[llave] = { ...l, cantidad: 0, clientes: new Set(), destinos: new Set() };
+            grupos[llave].cantidad += 1;
+            if (l.cliente) grupos[llave].clientes.add(l.cliente);
+            if (l.destino) grupos[llave].destinos.add(l.destino);
+          });
+          return Object.values(grupos).sort((a, b) => a.marca.localeCompare(b.marca));
+        };
+        const vendidosAgrupados = agruparVendidos(soldItems);
+        const filasVendidos = vendidosAgrupados.map(item => {
+          const marcaModelo = `${item.marca || ''} ${item.modelo || ''}`;
+          const clientes = [...item.clientes].join(', ') || 'N/A';
+          const destinos = [...item.destinos].join(', ') || 'N/A';
+          return `<tr style="background-color: #1e293b; color: #e2e8f0;"><td style="padding: 6px; border: 1px solid #334155;">${marcaModelo}</td><td style="padding: 6px; border: 1px solid #334155; font-weight: bold;">${item.cantidad}</td><td style="padding: 6px; border: 1px solid #334155;">${clientes}</td><td style="padding: 6px; border: 1px solid #334155;">${destinos}</td></tr>`;
+        }).join('');
+
+        tabla_vendidos_html = `<tr><td colspan="7" style="padding: 20px 0; border: none;"><div style="width: 100%; height: 1px; background: #334155;"></div></td></tr><tr><td colspan="7" align="center" style="padding-bottom: 20px; border: none;"><font size="5" color="#ef4444" style="letter-spacing: 1px;"><b>EQUIPOS VENDIDOS (LOTES)</b></font></td></tr><tr><td colspan="7" style="padding: 0; border: none;"><table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse: collapse; border: 1px solid #334155; font-size: 10px; text-align: center; color: #ffffff;"><thead><tr bgcolor="#0f172a"><th width="40%"><font color="#ef4444">MARCA / MODELO</font></th><th width="10%"><font color="#ef4444">CANT.</font></th><th width="25%"><font color="#ef4444">CLIENTE(S)</font></th><th width="25%"><font color="#ef4444">DESTINO(S)</font></th></tr></thead><tbody>${filasVendidos}</tbody></table></td></tr>`;
+      }
+
+      // 4. Combinar ambas tablas en una sola variable
+      const tabla_html_final = tabla_stock_html + tabla_vendidos_html;
+
+      // 5. Calcular estadísticas para el cuadro resumen
+      const total_ingresados = laptopsFiltradas.length;
+      const registrados_hoy = stockItems.length;
+      const enviados_hoy = soldItems.length;
+      const stock_lenovo = laptops.filter(l => l.estado === 'STOCK' && l.marca?.toUpperCase() === 'LENOVO').length;
+      const stock_asus = laptops.filter(l => l.estado === 'STOCK' && l.marca?.toUpperCase() === 'ASUS').length;
+      const stock_total = laptops.filter(l => l.estado === 'STOCK').length;
+      const num_pedidos = new Set(laptopsFiltradas.map(l => l.n_pedido).filter(Boolean)).size;
+
+      const templateParams = {
+        user_email: 'Percycuentas33@gmail.com, cristianmiguelalvaroespinoza@gmail.com',
+        subject_date: new Date().toLocaleDateString('es-PE'),
+        remitente_nombre: usuarioLogueado?.nombre || "Sistema",
+        titulo_informe: "INFORME DE TABLA",
+        total_ingresados,
+        registrados_hoy,
+        enviados_hoy,
+        stock_lenovo,
+        stock_asus,
+        stock_total,
+        num_pedidos,
+        tabla_html: tabla_html_final
+      };
+
+      await emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID_TABLA, templateParams, CONFIG.EMAILJS_USER_ID);
+      alert(`✅ ¡Informe de tabla enviado con éxito!`);
+      if(setMostrarModalInformes) setMostrarModalInformes(false);
+    } catch (err) {
+      console.error("Error en el envío del informe de tabla:", err);
+      alert("❌ Error: " + (err.text || err.message));
+    } finally {
+      setCargando(false);
+    }
+    return;
   }
-  // 3. Validar si hay algo que enviar
-  if (registradosHoy.length === 0 && vendidosHoy.length === 0) {
-    return alert(`No hay registros ni ventas para el periodo seleccionado.`);
-  }
 
-  setCargando(true);
-
-  try {
-    const totalGanado = vendidosHoy.reduce((acc, curr) => acc + Number(curr.precio || 0), 0);
-    
-    const agruparLotes = (lista, esVenta = false) => {
-      const grupos = {};
-      lista.forEach(l => {
-        const llave = `${l.marca} ${l.modelo}`.trim().toUpperCase();
-        if (!grupos[llave]) {
-          grupos[llave] = { cantidad: 0, precio: 0 };
-        }
-        grupos[llave].cantidad += 1;
-        grupos[llave].precio += Number(l.precio || 0);
-      });
-
-      return Object.entries(grupos).map(([nombre, data]) => {
-        if (esVenta) {
-          return `• ${nombre} <b>(${data.cantidad})</b> - S/ ${data.precio.toFixed(2)}`;
-        }
-        return `• ${nombre} <b>(${data.cantidad})</b>`;
-      }).join('<br/>');
+  if (config) {
+    // --- LÓGICA PARA "GMAIL REPORT EXCEL" (PLANTILLA DE DIVS) ---
+    const { tipo, fecha } = config;
+    const hoy = new Date();
+    const mesActual = hoy.getMonth() + 1;
+    const anioActual = hoy.getFullYear();
+    const normalizar = (fechaStr) => {
+      if (!fechaStr) return "";
+      const partes = fechaStr.split('/');
+      return partes.length !== 3 ? fechaStr : `${parseInt(partes[0])}/${parseInt(partes[1])}/${partes[2]}`;
+    };
+    const esDelPeriodo = (fechaStr, tipoPeriodo, fechaPersonalizada) => {
+      if (!fechaStr) return false;
+      const fechaNormalizada = normalizar(fechaStr);
+      if (tipoPeriodo === 'dia') return fechaNormalizada === normalizar(hoy.toLocaleDateString('es-PE'));
+      if (tipoPeriodo === 'calendario') {
+        const [y, m, d] = fechaPersonalizada.split('-');
+        return fechaNormalizada === `${parseInt(d)}/${parseInt(m)}/${y}`;
+      }
+      if (tipoPeriodo === 'mes') {
+        const [d, m, a] = fechaNormalizada.split('/');
+        return parseInt(m) === mesActual && parseInt(a) === anioActual;
+      }
+      return false;
     };
 
-    const listaIngresos = registradosHoy.length > 0 
-      ? agruparLotes(registradosHoy) 
-      : "Sin ingresos";
+    const registradosEnPeriodo = laptops.filter(lap => esDelPeriodo(lap.fecha, tipo, fecha));
+    const vendidosEnPeriodo = laptops.filter(lap => lap.estado === 'VENDIDO' && esDelPeriodo(lap.fecha_venta || lap.fecha, tipo, fecha));
+    const fechaParaInforme = tipo === 'dia' ? hoy.toLocaleDateString('es-PE') : tipo === 'mes' ? `Mes de ${hoy.toLocaleString('es-PE', { month: 'long' })}` : fecha;
 
-    const listaVentas = vendidosHoy.length > 0 
-      ? agruparLotes(vendidosHoy, true) 
-      : "Sin ventas";
+    if (registradosEnPeriodo.length === 0 && vendidosEnPeriodo.length === 0) {
+      return alert(`No hay registros ni ventas para el periodo seleccionado.`);
+    }
 
-    // 4. Parámetros para la plantilla
+    setCargando(true);
+    try {
+      const totalGanado = vendidosEnPeriodo.reduce((acc, curr) => acc + Number(curr.precio || 0), 0);
+      const gananciaNeta = vendidosEnPeriodo.reduce((acc, curr) => acc + (Number(curr.utilidad) || 0), 0);
+      const agruparLotes = (lista, esVenta = false) => {
+        const grupos = {};
+        lista.forEach(l => {
+          const llave = `${l.marca} ${l.modelo}`.trim().toUpperCase();
+          if (!grupos[llave]) {
+            grupos[llave] = { 
+              cantidad: 0, 
+              precio: 0, 
+              responsables: new Set(), 
+              clientes: new Set(), 
+              destinos: new Set() 
+            };
+          }
+          grupos[llave].cantidad += 1;
+          grupos[llave].precio += Number(l.precio || 0);
+          
+          if (esVenta) {
+            if (l.cliente) grupos[llave].clientes.add(l.cliente);
+            if (l.destino) grupos[llave].destinos.add(l.destino);
+          } else {
+            const responsable = typeof l.responsable === 'object' ? l.responsable.nombre : l.responsable;
+            if (responsable) grupos[llave].responsables.add(responsable);
+          }
+        });
+        return Object.keys(grupos).sort().map(nombre => {
+          const data = grupos[nombre];
+          const cantidadStr = data.cantidad > 1 ? ` <b>(${data.cantidad})</b>` : '';
+          
+          if (esVenta) {
+            const clientesStr = [...data.clientes].join(', ');
+            const destinosStr = [...data.destinos].join(', ');
+            let ventaInfo = '';
+            if (clientesStr || destinosStr) {
+              ventaInfo = ` | ${clientesStr || 'N/A'} - ${destinosStr || 'N/A'}`;
+            }
+            return `• ${nombre}${cantidadStr} - S/ ${data.precio.toFixed(2)}${ventaInfo}`;
+          } else {
+            const responsablesStr = [...data.responsables].join(', ');
+            let registroInfo = '';
+            if (responsablesStr) {
+              registroInfo = ` | Reg: ${responsablesStr}`;
+            }
+            return `• ${nombre}${cantidadStr}${registroInfo}`;
+          }
+        }).join('<br/>');
+      };
+
+      const listaIngresos = registradosEnPeriodo.length > 0 ? agruparLotes(registradosEnPeriodo) : "Sin ingresos en este periodo.";
+      const listaVentas = vendidosEnPeriodo.length > 0 ? agruparLotes(vendidosEnPeriodo, true) : "Sin ventas en este periodo.";
+
     const templateParams = {
-      user_email: CONFIG.ADMIN_EMAILS,
+      user_email: 'Percycuentas33@gmail.com, cristianmiguelalvaroespinoza@gmail.com',
       fecha_informe: fechaParaInforme,
-      equipos_hoy: registradosHoy.length,   
-      ventas_hoy: vendidosHoy.length,       
-      stock_total: laptops.filter(l => {
-        const estadoLimpio = l.estado?.toUpperCase().trim();
-        return estadoLimpio === 'STOCK' || estadoLimpio === 'ALMACEN' || estadoLimpio === 'EN STOCK';
-      }).length,
+      equipos_hoy: registradosEnPeriodo.length,
+      ventas_hoy: vendidosEnPeriodo.length,
+      stock_total: laptops.filter(l => (l.estado || 'STOCK').toUpperCase() === 'STOCK').length,
       total_db: laptops.length,
       total_ganado: totalGanado.toFixed(2),
-      link_reporte: `https://tu-app-leonidas.vercel.app/reporte/${fechaConsulta}`,
-      remitente_nombre: usuarioLogueado?.nombre || "Usuario Desconocido",
+      ganancia_neta: gananciaNeta.toFixed(2),
+      remitente_nombre: usuarioLogueado?.nombre || "Sistema",
       lista_equipos: listaIngresos,
       lista_vendidos: listaVentas,
       name: "Leonidas Store"
     };
 
-    const res = await enviarInformeEmail(templateParams);
-
-    if (res.status === 200) {
-      alert(`✅ ¡Informe profesional enviado!\nIngresos: ${registradosHoy.length}\nVentas: S/ ${totalGanado.toFixed(2)}`);
-      if(setMostrarModalInformes) setMostrarModalInformes(false);
+    // CORRECCIÓN: Se llama a emailjs.send directamente para asegurar que se pasa la Public Key (User ID).
+    // La función anterior 'enviarInformeEmail' no pasaba este parámetro, causando el error.
+    await emailjs.send(
+      CONFIG.EMAILJS_SERVICE_ID,
+      CONFIG.EMAILJS_TEMPLATE_ID, // ID de la Plantilla A ('template_43j4dvh')
+      templateParams,
+      CONFIG.EMAILJS_USER_ID // La Public Key que faltaba
+    );
+    alert(`✅ ¡Informe enviado!\nIngresos: ${registradosEnPeriodo.length}\nVentas: S/ ${totalGanado.toFixed(2)}`);
+    if(setMostrarModalInformes) setMostrarModalInformes(false);
+    } catch (err) {
+      console.error("Error en el envío:", err);
+      alert("❌ Error: " + (err.text || err.message));
+    } finally {
+      setCargando(false);
     }
-
-  } catch (err) {
-    console.error("Error en el envío:", err);
-    alert("❌ Error: " + (err.text || err.message));
-  } finally {
-    setCargando(false);
   }
 };
+  const manejarEnvioFormal = async (datosFiltrados = null) => {
+    const datosAProcesar = datosFiltrados || laptops;
+    if (!datosAProcesar || datosAProcesar.length === 0) {
+      alert("No hay datos en el periodo seleccionado para generar el informe.");
+      return;
+    }
+    setCargando(true);
+    try {
+      await enviarInformeDiarioEmailJS({ laptopsFiltradas: datosAProcesar });
+      setMostrarModalInformes(false);
+    } catch (error) {
+      console.error("Error al enviar el informe:", error);
+      alert("❌ Hubo un error al generar el informe.");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   const manejarCambio = (e) => {
   const { name, value, type, files } = e.target;

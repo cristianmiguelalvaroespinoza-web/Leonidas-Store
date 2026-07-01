@@ -5,9 +5,10 @@ export const CONFIG = {
 
   EMAILJS_SERVICE_ID: 'service_5aye42e',
   EMAILJS_TEMPLATE_ID: 'template_43j4dvh',
-  EMAILJS_PUBLIC_KEY: 'LYMd0YBJQ-9sBWLxQ',
+  EMAILJS_TEMPLATE_ID_TABLA: 'template_k83jrub', // ID para la plantilla de tabla grande
+  EMAILJS_USER_ID: 'LYMd0YBJQ-9sBWLxQ', // Renombrado para mayor claridad
   ADMIN_EMAILS: "cristianmiguelalvaroespinoza@gmail.com,percycuentas33@gmail.com",
-
+  
   EXCEL_WEBHOOK_URL: "https://script.google.com/macros/s/AKfycbztJgQoVuQxdNZqhlB1nF4Oygn60rBcAlC_tw7KuwQYzYaD8Kb8h9vXUghvqF52o3nB/exec",
   EXCEL_ONLINE_URL: "https://docs.google.com/spreadsheets/d/1rsV8xEyN7E90WNF1kbUPSaw3b6avrmYuqyKhoRgb4RU/edit",
 
