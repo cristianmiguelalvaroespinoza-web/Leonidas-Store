@@ -20,7 +20,8 @@ const PanelGestionUsuarios = ({
   // Extendemos los permisos existentes con el nuevo permiso de "DESPACHAR"
   const extendedAllPermissions = {
     ...allPermissions,
-    DESPACHAR: 'DESPACHAR'
+    DESPACHAR: 'DESPACHAR',
+    ASIGNAR_PRECIOS: 'ASIGNAR_PRECIOS'
   };
 
   // --- NUEVO: useEffect para forzar permisos obligatorios ---

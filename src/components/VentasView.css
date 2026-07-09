@@ -1031,3 +1031,88 @@
   font-size: 0.9rem;
   padding: 0 10px;
 }
+
+.paginacion-pagina-actual {
+  padding: 0 10px;
+}
+
+/* ============================================================
+   MODAL DE VENTA RÁPIDA (AÑADIDO PARA DESPACHOSVIEW)
+   ============================================================ */
+
+.modal-panel-venta-rapida {
+  background-color: #1e293b;
+  color: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  border: 1px solid #334155;
+  animation: modalEntradaRapida 0.2s ease-out;
+}
+
+.modal-panel-venta-rapida h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #00ff7f;
+}
+
+.modal-panel-venta-rapida p {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.modal-panel-venta-rapida form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.modal-panel-venta-rapida .form-grid-rapido {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.modal-panel-venta-rapida .form-campo-rapido label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.modal-panel-venta-rapida .botones-rapido {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-panel-venta-rapida .botones-rapido button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modal-panel-venta-rapida .botones-rapido .btn-cancelar-rapido {
+  background-color: #475569;
+  color: white;
+}
+
+.modal-panel-venta-rapida .botones-rapido .btn-guardar-rapido {
+  background-color: #00ff7f;
+  color: #0f172a;
+}
+
+.modal-panel-venta-rapida .botones-rapido .btn-guardar-rapido:disabled {
+  background-color: #475569;
+  cursor: not-allowed;
+}

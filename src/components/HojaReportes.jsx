@@ -139,6 +139,7 @@ const toggleModelo = (clave) => {
 
   const exportarExcel = () => {
     if (esVendedor) return; 
+
     const datosFormateados = datosFiltrados.map((item, i) => {
       const row = {
         'N°': i + 1,
@@ -153,10 +154,14 @@ const toggleModelo = (clave) => {
         SERIAL: item.serial,
       };
 
+      const esVendido = (item.estado || "STOCK").toUpperCase() === 'VENDIDO';
+
       if (esSuperAdmin) row['COSTO'] = item.precio_costo || 0;
       row['PRECIO'] = item.precio;
-      if (esSuperAdmin) row['UTILIDAD'] = item.utilidad || 0;
-
+      if (esSuperAdmin) {
+        // ✅ CORRECCIÓN: La utilidad en el reporte es 0 si no está vendido.
+        row['UTILIDAD'] = esVendido ? (item.utilidad || (Number(item.precio) - Number(item.precio_costo)) || 0) : 0;
+      }
       row['ESTADO'] = item.estado || "STOCK";
       row['CLIENTE'] = item.cliente || "N/A";
       row['TELEFONO'] = item.telefono || item.celular || "N/A";
@@ -321,7 +326,7 @@ const toggleModelo = (clave) => {
   }}
             >
                 <option value="TODOS">👤 TODOS LOS USUARIOS</option>
-                <option value="LEONIDAS">LEONIDAS</option>
+                <option value="JEFE">JEFE</option>
                 <option value="CRISTOFER">CRISTOFER</option>
                 <option value="DAVID">DAVID</option>
                 <option value="YAEL">YAEL</option>
@@ -329,7 +334,7 @@ const toggleModelo = (clave) => {
             </select>
         </div>
 
-        <div className={`${styles.reportesControls} mobile-stack`}>
+        <div className={`${styles.reportesControls} mobile-stack`} style={{alignItems: 'center'}}>
           <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
             <input
               type="text"
@@ -356,6 +361,14 @@ const toggleModelo = (clave) => {
                 }}
             ><QrCode size={20} /></button>
           </div>
+          <input 
+            type="date" 
+            title="Filtrar por fecha específica"
+            value={fechaFiltro || ""} 
+            onChange={(e) => setFechaFiltro(e.target.value)} 
+            className={styles.inputFecha}
+            style={{ height: '40px' }}
+          />
           
           <button 
             onClick={limpiarFiltros}
@@ -375,14 +388,6 @@ const toggleModelo = (clave) => {
             👁️ Ver Todo
           </button>
 
-          <input 
-            type="date" 
-            title="Filtrar por fecha específica"
-            value={fechaFiltro || ""} 
-            onChange={(e) => setFechaFiltro(e.target.value)} 
-            className={styles.inputFecha}
-            style={{ height: '40px' }}
-          />
           {!esVendedor && (
             <button 
               onClick={exportarExcel} 
@@ -641,7 +646,9 @@ const toggleModelo = (clave) => {
                   <td style={{ ...estiloCelda, textAlign: 'center', color: tienePrecio ? '#60a5fa' : '#ef4444', fontWeight: 'bold' }}>
                     {tienePrecio ? `S/ ${item.precio}` : 'SIN PRECIO'}
                   </td>
-                  {esSuperAdmin && <td style={{ ...estiloCelda, color: '#00ff7f', fontWeight: 'bold' }}>S/ {item.utilidad || 0}</td>}
+                  {esSuperAdmin && <td style={{ ...estiloCelda, color: '#00ff7f', fontWeight: 'bold' }}>
+                    S/ {(estadoStr === 'VENDIDO' ? (item.utilidad || (Number(item.precio) - Number(item.precio_costo)) || 0) : 0).toFixed(2)}
+                  </td>}
                   <td style={{ ...estiloCelda, textAlign: 'center', padding: '0px 4px' }}>
                     <span style={{ color: colorEstado, fontWeight: 'bold', fontSize: '10px', border: `1px solid ${colorEstado}`, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase' }}>
                       {estadoStr}

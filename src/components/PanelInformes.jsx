@@ -27,10 +27,12 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 // IMPORTACIÓN DEL CSS MODULE
 import styles from './PanelInformes.module.css';
+import ReporteDiarioView from './ReporteDiario/ReporteDiarioView.jsx'; // REUBICADO: Movido a su propia carpeta para mejor organización y corregir el error.
 
-const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLogueado }) => {
+const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLogueado, tienePermiso }) => {
   // --- ESTADOS ORIGINALES ---
-  const [periodoInterno, setPeriodoInterno] = useState('dia'); 
+  const [vistaInterna, setVistaInterna] = useState('generador'); // 'generador' o 'diario'
+  const [periodoInterno, setPeriodoInterno] = useState('dia');
   const [fechaManual, setFechaManual] = useState(new Date().toISOString().split('T')[0]);
   const [periodoTabla, setPeriodoTabla] = useState('dia'); 
   const [fechaTabla, setFechaTabla] = useState(new Date().toISOString().split('T')[0]);
@@ -129,7 +131,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
 
 // FUNCIÓN PARA CONTROLAR EL MODAL DE LEONIDAS
   const handleAccionVendedor = (nombre, cantidad, total, tipo) => {
-    if (nombre === "LEONIDAS") {
+    if (nombre === "JEFE") {
       setModalDataLeonidas({ nombre, cantidad, total });
       setTipoArchivoLeonidas(tipo);
       setShowModalLeonidas(true);
@@ -222,7 +224,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         const row = worksheet.addRow({
           index: i + 1,
           fecha: l.fecha_venta || l.fecha,
-          vendedor: l.responsable || 'LEONIDAS',
+          vendedor: l.responsable || 'JEFE',
           equipo: `${l.marca} ${l.modelo}`,
           especificaciones: `${l.procesador} / ${l.ram} / ${l.disco}`,
           serial: l.serial,
@@ -269,8 +271,8 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
       else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
       else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
       else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
-      else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
-      else asignado = 'LEONIDAS';
+      else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS') || nombreEnDB.includes('JEFE')) asignado = 'JEFE';
+      else asignado = 'JEFE';
 
       return asignado === nombreVendedor;
     });
@@ -300,8 +302,8 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
         else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
         else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
-        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
-        else asignado = 'LEONIDAS';
+        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS') || nombreEnDB.includes('JEFE')) asignado = 'JEFE';
+        else asignado = 'JEFE';
 
         return asignado === nombre;
       });
@@ -397,8 +399,8 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         else if (nombreEnDB.includes('CRISTOFER')) asignado = 'CRISTOFER';
         else if (nombreEnDB.includes('YAEL')) asignado = 'YAEL';
         else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
-        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
-        else asignado = 'LEONIDAS';
+        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS') || nombreEnDB.includes('JEFE')) asignado = 'JEFE';
+        else asignado = 'JEFE';
 
         return asignado === nombre;
       });
@@ -492,7 +494,7 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
   // --- RENDIMIENTO POR VENDEDOR (DINÁMICO) ---
   const rendimientoUsuarios = useMemo(() => {
     const data = {
-      'LEONIDAS': { cantidad: 0, total: 0, color: '#00ff7f' },
+      'JEFE': { cantidad: 0, total: 0, color: '#00ff7f' },
       'DAVID': { cantidad: 0, total: 0, color: '#3b82f6' },
       'CRISTOFER': { cantidad: 0, total: 0, color: '#0ea5e9' },
       'YAEL': { cantidad: 0, total: 0, color: '#a855f7' },
@@ -513,9 +515,9 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
         // Prioridad para el rol de administrador
         else if (rolEnDB === 'administrador_ventas' || nombreEnDB.includes('PERSONAL ADMINISTRADOR')) asignado = 'PERSONAL ADMINISTRADOR';
         // Prioridad para el super admin
-        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS')) asignado = 'LEONIDAS';
+        else if (rolEnDB === 'super_admin' || nombreEnDB.includes('LEONIDAS') || nombreEnDB.includes('JEFE')) asignado = 'JEFE';
         // Caso por defecto: cualquier otro usuario va a Leonidas
-        else asignado = 'LEONIDAS';
+        else asignado = 'JEFE';
 
         if (data[asignado]) {
           data[asignado].cantidad += 1;
@@ -536,189 +538,200 @@ const PanelInformes = ({ laptops, manejarGeneracionReporte, cargando, usuarioLog
     <div className={styles.container}>
       <header className={styles.header}>
         <h1><BarChart3 size={32} /> PANEL DE INFORMES</h1>
-        <p>Bienvenido, <strong>{usuarioLogueado?.nombre}</strong>. Gestión de Finpro Store.</p>
+        <p>Bienvenido, <strong>{usuarioLogueado?.rol === 'super_admin' ? 'Jefe' : usuarioLogueado?.nombre}</strong>. Gestión de Finpro Store.</p>
       </header>
+      {/* NAVEGACIÓN INTERNA */}
+      <div className={styles.internalNav}>
+        <button 
+          className={`${styles.navButton} ${vistaInterna === 'generador' ? styles.navButtonActive : ''}`}
+          onClick={() => setVistaInterna('generador')}
+        >
+          Generador de Informes
+        </button>
+        <button 
+          className={`${styles.navButton} ${vistaInterna === 'diario' ? styles.navButtonActive : ''}`}
+          onClick={() => setVistaInterna('diario')}
+        >
+          Reporte Diario
+        </button>
+      </div>
 
-      <div className={styles.mainGrid}>
-        <section>
-          {/* ... tus cardsGrid (Total Recaudado, Stock, etc) se mantienen igual ... */}
-          <div className={styles.cardsGrid}>
-             <div className={`${styles.card} ${styles.recaudado}`}>
-               <TrendingUp color="#00ff7f" size={20} />
-               <span>TOTAL RECAUDADO (VISTA)</span>
-               <h2>S/ {totalVentasTabla.toFixed(2)}</h2>
-             </div>
-             
-             <div className={`${styles.card} ${styles.tienda}`} onClick={abrirModalStock} style={{ cursor: 'pointer' }} title="Click para ver detalle del Stock">
-               <Package color="#3b82f6" size={20} />
-               <span>STOCK EN TIENDA</span>
-               <h2>{laptops.filter(l => l.estado === 'STOCK').length}</h2>
-             </div>
+      {vistaInterna === 'generador' && (
+        <div className={`${styles.mainGrid} fade-in`}>
+          <section>
+            <div className={styles.cardsGrid}>
+               <div className={`${styles.card} ${styles.recaudado}`}>
+                 <TrendingUp color="#00ff7f" size={20} />
+                 <span>TOTAL RECAUDADO (VISTA)</span>
+                 <h2>S/ {totalVentasTabla.toFixed(2)}</h2>
+               </div>
+               
+               <div className={`${styles.card} ${styles.tienda}`} onClick={abrirModalStock} style={{ cursor: 'pointer' }} title="Click para ver detalle del Stock">
+                 <Package color="#3b82f6" size={20} />
+                 <span>STOCK EN TIENDA</span>
+                 <h2>{laptops.filter(l => l.estado === 'STOCK').length}</h2>
+               </div>
 
-             <div className={`${styles.card} ${styles.vendido}`} onClick={() => setMostrarModalVendidos(true)} style={{ cursor: 'pointer' }}>
-               <ShoppingCart color="#a855f7" size={20} />
-               <span>STOCK VENDIDO TOTAL</span>
-               <h2>{laptopsVendidasHistorico.length}</h2>
-             </div>
-          </div>
+               <div className={`${styles.card} ${styles.vendido}`} onClick={() => setMostrarModalVendidos(true)} style={{ cursor: 'pointer' }}>
+                 <ShoppingCart color="#a855f7" size={20} />
+                 <span>STOCK VENDIDO TOTAL</span>
+                 <h2>{laptopsVendidasHistorico.length}</h2>
+               </div>
+            </div>
 
-          <div className={styles.seccionOscura}>
-              {/* ... controles de periodo se mantienen igual ... */}
-              <h3>⚙️ CONFIGURACIÓN DEL REPORTE</h3>
-              <div className={`${styles.controlesPeriodo} mobile-stack`} style={{ display: 'flex', alignItems: 'stretch' }}>
-  <button onClick={() => setPeriodoInterno('dia')} className={`${styles.btnPeriodo} ${periodoInterno === 'dia' ? styles.btnPeriodoActive : ''}`}>HOY</button>
-  
-  <input 
-    type="date" 
-    value={fechaManual} 
-    className={styles.inputDate} 
-    onChange={(e) => { 
-      setFechaManual(e.target.value); 
-      setPeriodoInterno('calendario'); 
-    }} 
-    style={{ 
-      flex: 1, 
-      maxWidth: '200px', 
-      padding: '0 15px',
-      borderRadius: '8px',
-      border: periodoInterno === 'calendario' ? '2px solid #3b82f6' : '1px solid transparent',
-      outline: 'none',
-      cursor: 'pointer',
-      margin: '0 5px',
-      boxSizing: 'border-box'
-    }}
-  />
-  
-  <button onClick={() => setPeriodoInterno('mes')} className={`${styles.btnPeriodo} ${periodoInterno === 'mes' ? styles.btnPeriodoActive : ''}`}>MES ACTUAL</button>
-</div>
-              <div className={`${styles.gridAcciones} mobile-stack`}>
-                <button onClick={() => ejecutarReporte('pdf')} disabled={cargando} className={`${styles.btnAccion} ${styles.btnPdf}`}><FileText size={20} /> {cargando ? 'GENERANDO...' : 'ENVIAR GMAIL TABLA'}</button>
-                
-                <div style={{ display: 'flex', gap: '10px', gridColumn: 'span 1' }}>
-                  <button 
-  onClick={descargarExcelEstiloOscuro} 
-  className={styles.btnAccion} 
-  style={{ flex: 1, background: 'transparent', borderColor: '#00ff7f', color: '#00ff7f' }}
->
-  <Table size={18} /> INFORME GENERAL
-</button>
-                  <button onClick={descargarRegistroVentasOscuro} className={styles.btnAccion} style={{ flex: 1, borderColor: '#34d399', color: '#34d399', background: 'transparent' }}>
-                    <FileSpreadsheet size={18} /> REGISTRAR
-                  </button>
+            <div className={styles.seccionOscura}>
+                <h3>⚙️ CONFIGURACIÓN DEL REPORTE</h3>
+                <div className={`${styles.controlesPeriodo} mobile-stack`} style={{ display: 'flex', alignItems: 'stretch' }}>
+                  <button onClick={() => setPeriodoInterno('dia')} className={`${styles.btnPeriodo} ${periodoInterno === 'dia' ? styles.btnPeriodoActive : ''}`}>HOY</button>
+                  <input 
+                    type="date" 
+                    value={fechaManual} 
+                    className={styles.inputDate} 
+                    onChange={(e) => { 
+                      setFechaManual(e.target.value); 
+                      setPeriodoInterno('calendario'); 
+                    }} 
+                    style={{ 
+                      flex: 1, 
+                      maxWidth: '200px', 
+                      padding: '0 15px',
+                      borderRadius: '8px',
+                      border: periodoInterno === 'calendario' ? '2px solid #3b82f6' : '1px solid transparent',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      margin: '0 5px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button onClick={() => setPeriodoInterno('mes')} className={`${styles.btnPeriodo} ${periodoInterno === 'mes' ? styles.btnPeriodoActive : ''}`}>MES ACTUAL</button>
                 </div>
+                <div className={`${styles.gridAcciones} mobile-stack`}>
+                  <button onClick={() => ejecutarReporte('pdf')} disabled={cargando} className={`${styles.btnAccion} ${styles.btnPdf}`}><FileText size={20} /> {cargando ? 'GENERANDO...' : 'ENVIAR GMAIL TABLA'}</button>
+                  <div style={{ display: 'flex', gap: '10px', gridColumn: 'span 1' }}>
+                    <button 
+                      onClick={descargarExcelEstiloOscuro} 
+                      className={styles.btnAccion} 
+                      style={{ flex: 1, background: 'transparent', borderColor: '#00ff7f', color: '#00ff7f' }}
+                    >
+                      <Table size={18} /> INFORME GENERAL
+                    </button>
+                    <button onClick={descargarRegistroVentasOscuro} className={styles.btnAccion} style={{ flex: 1, borderColor: '#34d399', color: '#34d399', background: 'transparent' }}>
+                      <FileSpreadsheet size={18} /> REGISTRAR
+                    </button>
+                  </div>
+                  <button onClick={() => ejecutarReporte('texto')} className={`${styles.btnAccion} ${styles.btnMail}`}><Mail size={20} /> GMAIL REPORT EXCEL</button>
+                  <button onClick={() => ejecutarReporte('whatsapp')} className={`${styles.btnAccion} ${styles.btnWhatsapp}`}><MessageCircle size={20} /> WHATSAPP</button>
+                </div>
+            </div>
+          </section>
 
-                <button onClick={() => ejecutarReporte('texto')} className={`${styles.btnAccion} ${styles.btnMail}`}><Mail size={20} /> GMAIL REPORT EXCEL</button>
-                <button onClick={() => ejecutarReporte('whatsapp')} className={`${styles.btnAccion} ${styles.btnWhatsapp}`}><MessageCircle size={20} /> WHATSAPP</button>
-              </div>
-          </div>
-        </section>
-
-        <section className={styles.seccionOscura} style={{ width: '100%', maxWidth: '550px' }}>
-          {/* ... Encabezado de tabla y botones de historial se mantienen igual ... */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Users size={22} color="#00ff7f" /> VENTAS REALIZADAS
-            </h3>
-            
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <button 
-                onClick={() => setMostrarHistorial(true)}
-                style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', color: '#3b82f6', padding: '5px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}
-              >
-                <History size={16} /> Historial
-              </button>
-
-              <div className={styles.controlesTabla}>
-                <button onClick={() => setPeriodoTabla('dia')} className={`${styles.btnMini} ${periodoTabla === 'dia' ? styles.btnMiniActive : ''}`}>HOY</button>
-               <div className={styles.inputDateContainer} style={{ padding: '0', display: 'flex', alignItems: 'center' }}>
-        <input 
-          type="date" 
-          value={fechaTabla} 
-          onChange={(e) => setFechaTabla(e.target.value)}
-          style={{
-            height: '32px',          /* Misma altura que los botones */
-            width: '135px',          /* <-- ESTO LO HACE MÁS CORTO */
-            padding: '0 8px',        /* Reducimos el relleno interno */
-            boxSizing: 'border-box', /* Evita que crezca de más */
-            borderRadius: '6px',     /* Bordes redondeados */
-            border: 'none',          /* Sin bordes extraños */
-            outline: 'none',
-            fontSize: '13px',
-            fontFamily: 'inherit',
-            margin: '0',
-            backgroundColor: '#ffffff', /* Fondo blanco */
-            color: '#000000'            /* Texto negro */
-          }}
-        />
-      </div>
-                <button onClick={() => setPeriodoTabla('mes')} className={`${styles.btnMini} ${periodoTabla === 'mes' ? styles.btnMiniActive : ''}`}>MES</button>
+          <section className={styles.seccionOscura} style={{ width: '100%', maxWidth: '550px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Users size={22} color="#00ff7f" /> VENTAS REALIZADAS
+              </h3>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button 
+                  onClick={() => setMostrarHistorial(true)}
+                  style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', color: '#3b82f6', padding: '5px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  <History size={16} /> Historial
+                </button>
+                <div className={styles.controlesTabla}>
+                  <button onClick={() => setPeriodoTabla('dia')} className={`${styles.btnMini} ${periodoTabla === 'dia' ? styles.btnMiniActive : ''}`}>HOY</button>
+                 <div className={styles.inputDateContainer} style={{ padding: '0', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type="date" 
+                      value={fechaTabla} 
+                      onChange={(e) => setFechaTabla(e.target.value)}
+                      style={{
+                        height: '32px',
+                        width: '135px',
+                        padding: '0 8px',
+                        boxSizing: 'border-box',
+                        borderRadius: '6px',
+                        border: 'none',
+                        outline: 'none',
+                        fontSize: '13px',
+                        fontFamily: 'inherit',
+                        margin: '0',
+                        backgroundColor: '#ffffff',
+                        color: '#000000'
+                      }}
+                    />
+                  </div>
+                  <button onClick={() => setPeriodoTabla('mes')} className={`${styles.btnMini} ${periodoTabla === 'mes' ? styles.btnMiniActive : ''}`}>MES</button>
+                </div>
               </div>
             </div>
-          </div>
-
-         <div style={{ width: '100%', overflowX: 'auto' }}>
-  <table className={styles.tablaLeonidas} style={{ width: '100%', minWidth: '0', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
-    <thead>
-      <tr>
-        <th style={{ width: '40%', padding: '5px', textAlign: 'left', fontSize: '0.85rem' }}>VENDEDOR</th>
-        <th style={{ width: '24%', padding: '5px', textAlign: 'center', fontSize: '0.85rem' }}>EQUIPOS</th>
-        <th style={{ width: '36%', padding: '5px', textAlign: 'right', fontSize: '0.85rem' }}>ACCIONES</th>
-      </tr>
-    </thead>
-    <tbody>
-      {Object.entries(rendimientoUsuarios).map(([nombre, data]) => (
-        <tr key={nombre} className={styles.rowVendedor}>
-          <td style={{ padding: '10px 5px', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: data.color, flexShrink: 0 }}></div>
-              <span style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombre}</span>
-            </div>
-          </td>
-          <td style={{ textAlign: 'center', padding: '10px 0' }}>
-            <button
-              className={styles.cantidadBadge}
-              onClick={() => abrirDetallesVendedor(nombre)}
-              style={{ cursor: 'pointer', border: '1px solid #00ff7f', background: 'transparent', color: '#00ff7f', fontSize: '0.8rem', padding: '4px 8px', whiteSpace: 'nowrap' }}
-            >
-              {data.cantidad} vendidos
-            </button>
-          </td>
-          <td style={{ textAlign: 'right', padding: '10px 5px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-              <span style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>S/ {data.total.toFixed(2)}</span>
-  
-  {/* Botón Excel con Intercepción */}
-        <button
-          className={styles.btnAccionPequeno}
-          style={{ borderColor: '#10b981', color: '#10b981' }} 
-          onClick={() => handleAccionVendedor(nombre, data.cantidad, data.total, "Excel")}
-          title="Bajar Excel detallado"
-        >
-          <FileSpreadsheet size={14} /> 
-        </button>
-
-        {/* Botón PDF con Intercepción */}
-        <button
-          className={styles.btnAccionPequeno}
-          style={{ borderColor: '#ef4444', color: '#ef4444' }} 
-          onClick={() => handleAccionVendedor(nombre, data.cantidad, data.total, "PDF")}
-          title="Bajar PDF detallado"
-        >
-          <FileDown size={14} />
-        </button>
-</div>
-                    </td>
+            <div style={{ width: '100%', overflowX: 'auto' }}>
+              <table className={styles.tablaLeonidas} style={{ width: '100%', minWidth: '0', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '40%', padding: '5px', textAlign: 'left', fontSize: '0.85rem' }}>VENDEDOR</th>
+                    <th style={{ width: '24%', padding: '5px', textAlign: 'center', fontSize: '0.85rem' }}>EQUIPOS</th>
+                    <th style={{ width: '36%', padding: '5px', textAlign: 'right', fontSize: '0.85rem' }}>ACCIONES</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.consolidado}>
-            <span>TOTAL CONSOLIDADO</span>
-            <span>S/ {totalVentasTabla.toFixed(2)}</span>
-          </div>
-        </section>
-      </div>
+                </thead>
+                <tbody>
+                  {Object.entries(rendimientoUsuarios).map(([nombre, data]) => (
+                    <tr key={nombre} className={styles.rowVendedor}>
+                      <td style={{ padding: '10px 5px', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: data.color, flexShrink: 0 }}></div>
+                          <span style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombre}</span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <button
+                          className={styles.cantidadBadge}
+                          onClick={() => abrirDetallesVendedor(nombre)}
+                          style={{ cursor: 'pointer', border: '1px solid #00ff7f', background: 'transparent', color: '#00ff7f', fontSize: '0.8rem', padding: '4px 8px', whiteSpace: 'nowrap' }}
+                        >
+                          {data.cantidad} vendidos
+                        </button>
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '10px 5px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <span style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>S/ {data.total.toFixed(2)}</span>
+                          <button
+                            className={styles.btnAccionPequeno}
+                            style={{ borderColor: '#10b981', color: '#10b981' }} 
+                            onClick={() => handleAccionVendedor(nombre, data.cantidad, data.total, "Excel")}
+                            title="Bajar Excel detallado"
+                          >
+                            <FileSpreadsheet size={14} /> 
+                          </button>
+                          <button
+                            className={styles.btnAccionPequeno}
+                            style={{ borderColor: '#ef4444', color: '#ef4444' }} 
+                            onClick={() => handleAccionVendedor(nombre, data.cantidad, data.total, "PDF")}
+                            title="Bajar PDF detallado"
+                          >
+                            <FileDown size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className={styles.consolidado}>
+              <span>TOTAL CONSOLIDADO</span>
+              <span>S/ {totalVentasTabla.toFixed(2)}</span>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {vistaInterna === 'diario' && (
+        <ReporteDiarioView 
+          laptops={laptops}
+          usuarioLogueado={usuarioLogueado}
+          tienePermiso={tienePermiso}
+        />
+      )}
 
       {/* --- MODAL DE HISTORIAL CORREGIDO --- */}
       {mostrarHistorial && (

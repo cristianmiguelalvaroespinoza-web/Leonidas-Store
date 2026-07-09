@@ -28,7 +28,8 @@ const RegistroVentasView = ({
   OPCIONES_DESTINO,
   OPCIONES_ESTADO,
   setVistaActual,
-  laptops
+  laptops,
+  tienePermiso
 }) => {
   const [mostrarManual, setMostrarManual] = useState({});
   const [mostrarAgenda, setMostrarAgenda] = useState(false);
@@ -422,12 +423,11 @@ const RegistroVentasView = ({
             {renderCampoMixto("MARCA", "marca", OPCIONES_MARCAS)}
 
             <div className={styles.campo}>
-              <label>MODELO (AUTOPRESS O OPCIONAL)</label>
+              <label>MODELO (Incluye Sugerencias Opcionales)</label>
               <input
                 list="modelos-filtrados"
                 name="modelo"
-                value={form.modelo}
-                onChange={manejarCambioModeloAuto}
+                value={form.modelo}                onChange={manejarCambioModeloAuto}
                 placeholder={form.marca ? `Modelos de ${form.marca}...` : "Elija marca primero"}
                 disabled={!form.marca}
               />
@@ -556,7 +556,7 @@ const RegistroVentasView = ({
                   <label style={{ color: '#00ff7f', fontWeight: 'bold' }}>REGISTRADO POR</label>
                   <select name="responsable" value={form.responsable || ""} onChange={manejarCambio} style={{ border: '1px solid #00ff7f', background: 'rgba(0, 255, 127, 0.05)', color: 'white' }}>
                     <option value="">Seleccionar Vendedor...</option>
-                    <option value="Leonidas">Leonidas</option>
+                    <option value="Jefe">Jefe</option>
                     <option value="David">David</option>
                     <option value="Cristofer">Cristofer</option>
                     <option value="Yael">Yael</option>
@@ -570,13 +570,13 @@ const RegistroVentasView = ({
               )}
             </div>
 
-            {usuarioLogueado?.rol === 'super_admin' ? (
+            {tienePermiso && tienePermiso('ASIGNAR_PRECIOS') ? (
                 <div className={styles.campo}>
-                    <label style={{ color: usuarioLogueado?.rol === 'super_admin' ? '#00ff7f' : 'inherit' }}>
-                      {usuarioLogueado?.rol === 'super_admin' ? 'PRECIO COSTO (S/.)' : 'PRECIO VENTA (S/.)'}
+                    <label style={{ color: '#00ff7f' }}>
+                      PRECIO COSTO (S/.)
                     </label>
                     <input type="number" name="precio_costo" value={form.precio_costo} onChange={manejarCambio} placeholder="Inversión"
-                      style={usuarioLogueado?.rol === 'super_admin' ? { border: '1px solid #00ff7f', background: 'rgba(0, 255, 127, 0.05)' } : {}}
+                      style={{ border: '1px solid #00ff7f', background: 'rgba(0, 255, 127, 0.05)' }}
                     />
                 </div>
             ) : (
@@ -584,9 +584,9 @@ const RegistroVentasView = ({
             )}
             
             <div className={styles.campo}>
-                {usuarioLogueado?.rol === 'super_admin' ? ( // Este es el campo PRECIO VENTA
+                {tienePermiso && tienePermiso('ASIGNAR_PRECIOS') ? ( // Este es el campo PRECIO VENTA
                     <div className={styles.campo} style={{ gridColumn: 'span 2' }}> {/* Hace que abarque 2 columnas */}
-                        <label>PRECIO VENTA (S/.)</label>
+                        <label>PRECIO DE VENTA (S/.)</label>
                         <input type="number" name="precio" value={form.precio} onChange={manejarCambio} style={{ height: '50px', fontSize: '1.2rem' }} />
                     </div>
                 ) : ( // Este es el campo CELULAR para otros roles
@@ -606,7 +606,7 @@ const RegistroVentasView = ({
               <label>IMÁGEN REFERENCIAL</label>
               <div className={styles.fileInputWrapper}>
                 <label htmlFor="imagenes-registro" className={styles.fileInputLabel}>
-                  {form.imagenes && form.imagenes.length > 0 ? `${form.imagenes.length} archivo(s)` : 'Seleccionar archivos...'}
+                  {form.imagenes && form.imagenes.length > 0 ? `${form.imagenes.length} archivo(s)` : 'Seleccionar Imagen..'}
                 </label>
                 <input type="file" id="imagenes-registro" name="imagenes" onChange={manejarCambio} multiple accept="image/*" className={styles.fileInput} />
               </div>

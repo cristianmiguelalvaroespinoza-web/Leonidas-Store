@@ -26,7 +26,6 @@ const VentasView = ({
   const [busquedaVentas, setBusquedaVentas] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("");
   const [filtroVendedor, setFiltroVendedor] = useState("TODOS");
-  const [filtroTiempo, setFiltroTiempo] = useState("TODAS");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
   const [laptopsSeleccionadas, setLaptopsSeleccionadas] = useState([]);
@@ -73,7 +72,6 @@ const VentasView = ({
     setBusquedaVentas("");
     setFiltroFecha("");
     setFiltroVendedor("TODOS");
-    setFiltroTiempo("TODAS");
   };
 
   // Para alternar la selección de un equipo
@@ -371,28 +369,6 @@ const VentasView = ({
     const pasaVendedor = filtroVendedor === "TODOS" || nombreVendedor.includes(filtroVendedor);
     if (!pasaVendedor) return false;
 
-    // Filtro por Tiempo (movido desde AlmacenTabla)
-    if (filtroTiempo !== "TODAS") {
-      const fechaStr = lap.fechaIngreso || lap.fecha || "";
-      const [diaStr, mesStr, anioStr] = fechaStr.split('/');
-      
-      if (diaStr && mesStr && anioStr) {
-        const dia = parseInt(diaStr, 10);
-        const mes = parseInt(mesStr, 10);
-        const anio = parseInt(anioStr, 10);
-        const hoy = new Date();
-
-        if (filtroTiempo === "HOY") {
-          if (dia !== hoy.getDate() || mes !== (hoy.getMonth() + 1) || anio !== hoy.getFullYear()) return false;
-        } 
-        else if (filtroTiempo === "ESTE_ANIO") {
-          if (anio !== 2026) return false;
-        }
-      } else {
-        return false; // Si no hay fecha válida, no pasa el filtro de tiempo
-      }
-    }
-
     // Filtro por fecha exacta (calendario de día)
     if (filtroFecha) {
       const [year, month, day] = filtroFecha.split('-');
@@ -507,7 +483,7 @@ const VentasView = ({
   // Resetear paginación al cambiar filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [busquedaVentas, filtroFecha, filtroVendedor, filtroTiempo]);
+  }, [busquedaVentas, filtroFecha, filtroVendedor]);
 
   return (
     <div className="ventas-view-container fade-in">
@@ -525,41 +501,12 @@ const VentasView = ({
             className="select-filtro-ventas"
           >
             <option value="TODOS">👤 Todos los Usuarios</option>
-            <option value="LEONIDAS">Leonidas</option>
+            <option value="JEFE">Jefe</option>
             <option value="CRISTOFER">Cristofer</option>
             <option value="DAVID">David</option>
             <option value="YAEL">Yael</option>
             <option value="PERSONAL ADMINISTRADOR">Administrador</option>
           </select>
-
-          <select 
-            value={filtroTiempo}
-            onChange={(e) => {
-              setFiltroTiempo(e.target.value);
-              // Limpiamos el filtro de fecha si se elige algo que no sea por día
-              if (e.target.value !== 'DIA') {
-                setFiltroFecha('');
-              }
-            }}
-            className="select-filtro-ventas"
-          >
-            <option value="TODAS">📅 Todas las Fechas</option>
-            <option value="HOY">📅 Hoy</option>
-            <option value="ESTE_ANIO">📅 Este Año (2026)</option>
-            <option value="DIA">📅 Elegir Día...</option>
-          </select>
-
-          {/* El calendario de día solo aparece si se elige "Elegir Día..." */}
-          {filtroTiempo === 'DIA' && (
-            <div className="calendar-box-ventas">
-              <input
-                type="date"
-                value={filtroFecha}
-                onChange={(e) => setFiltroFecha(e.target.value)}
-                className="input-calendar-ventas"
-              />
-            </div>
-          )}
 
           <button 
             onClick={descargarExcelVentas}
@@ -567,6 +514,12 @@ const VentasView = ({
           >
             <FileDown size={16} /> Descargar ({ventasOrdenadas.length})
           </button>
+          <input
+            type="date"
+            value={filtroFecha}
+            onChange={(e) => setFiltroFecha(e.target.value)}
+            className="input-calendar-ventas"
+          />
           <div className="search-box-ventas">
             {busquedaVentas === "" && (
               <Search size={18} className="search-icon" />

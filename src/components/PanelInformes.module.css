@@ -25,6 +25,36 @@
     margin-top: 10px;
 }
 
+/* NAVEGACIÓN INTERNA (Pestañas) */
+.internalNav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 15px;
+}
+
+.navButton {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.navButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+.navButtonActive {
+  background: #00ff7f;
+  color: #0f172a;
+  box-shadow: 0 0 15px rgba(0, 255, 127, 0.3);
+}
+
 .mainGrid {
     display: grid;
     grid-template-columns: 1fr 1.3fr;

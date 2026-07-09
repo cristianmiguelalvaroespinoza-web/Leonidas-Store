@@ -1148,15 +1148,28 @@ const laptopsFiltradas = laptops.filter(lap => {
     }
   };
 
-// --- CÁLCULO DE TOTALES (SOLO ADMINS) ---
-// Estos cálculos se ejecutan sobre el resultado ya filtrado
-let inversionTotal = 0;
-let utilidadTotal = 0;
+  // --- CÁLCULO DE TOTALES DINÁMICO (SOLO ADMINS) ---
+  const { inversionTotal, utilidadTotal } = useMemo(() => {
+    if (!tienePermiso(PERMISSIONS.VER_FINANZAS)) {
+      return { inversionTotal: 0, utilidadTotal: 0 };
+    }
 
-if (tienePermiso(PERMISSIONS.VER_FINANZAS)) {
-  inversionTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.precio_costo) || 0), 0);
-  utilidadTotal = laptopsFiltradas.reduce((acc, lap) => acc + (Number(lap.utilidad) || 0), 0);
-}
+    return laptopsFiltradas.reduce((acc, lap) => {
+      const costo = Number(lap.precio_costo) || 0;
+      const precio = Number(lap.precio) || 0;
+      const esVendido = lap.estado?.toUpperCase() === 'VENDIDO';
+
+      // La inversión siempre se calcula sobre los equipos filtrados.
+      acc.inversionTotal += costo;
+      
+      // CORRECCIÓN: La utilidad solo se suma si el equipo está VENDIDO.
+      if (esVendido) {
+        acc.utilidadTotal += (precio - costo);
+      }
+      
+      return acc;
+    }, { inversionTotal: 0, utilidadTotal: 0 });
+  }, [laptopsFiltradas, usuarioLogueado]); // Se recalcula si los filtros cambian o el usuario/permisos cambian.
 
 // --- Lógica para el menú de navegación desplazable ---
   const navItems = useMemo(() => {
@@ -1863,7 +1876,7 @@ if (!autenticado) {
             )}
             {/* ============================================================= */}
         
-          <div className="search-container-modern flex-mobile-stack" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
+          <div className="search-container-modern flex-mobile-stack" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, alignItems: 'center', gap: '15px' }}>
               {/* --- BUSCADOR CON FUERZA Y PROFUNDIDAD --- */}
             <div style={{
               display: 'flex',
@@ -2000,7 +2013,8 @@ if (!autenticado) {
               laptops={laptops} 
               manejarGeneracionReporte={manejarGeneracionReporte} 
               cargando={cargando} 
-              usuarioLogueado={usuarioLogueado} 
+              usuarioLogueado={usuarioLogueado}
+              tienePermiso={tienePermiso} 
             />
           </div>
         )}
@@ -2063,6 +2077,7 @@ if (!autenticado) {
             OPCIONES_ESTADO={OPCIONES_ESTADO}
             setVistaActual={setPestanaActual}
             laptops={laptops}
+            tienePermiso={tienePermiso}
           />
         )}
 
@@ -2156,6 +2171,15 @@ if (!autenticado) {
               iniciarEscaneo={iniciarEscaneo}
             />
           </div>
+        )}
+
+        {/* VISTA REPORTE DIARIO */}
+        {pestanaActual === 'reporte_diario' && tienePermiso(PERMISSIONS.VER_INFORMES) && (
+          <ReporteDiarioView
+            laptops={laptops}
+            usuarioLogueado={usuarioLogueado}
+            tienePermiso={tienePermiso}
+          />
         )}
 
         {pestanaActual === 'despachos' && (

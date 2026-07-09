@@ -1,15 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { X, Printer, User, MapPin, CalendarDays, Search, Package, Truck } from 'lucide-react'; 
-import { doc, updateDoc } from "firebase/firestore"; // Importación necesaria
+import { X, Printer, User, MapPin, CalendarDays, Search, Package, Truck, RotateCcw, PlusCircle } from 'lucide-react'; 
+import { doc, updateDoc, addDoc, collection } from "firebase/firestore"; // Importación necesaria
 import { db } from "../firebase"; // Asegúrate que la ruta sea correcta
 import './VentasView.css';
 
 const DespachosView = ({ laptops, usuarioLogueado }) => {
   const [busqueda, setBusqueda] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState("");
   const [equipoDetalle, setEquipoDetalle] = useState(null);
   const [mostrarGuia, setMostrarGuia] = useState(false);
+  const [mostrarModalVentaRapida, setMostrarModalVentaRapida] = useState(false);
+  const [cargandoVentaRapida, setCargandoVentaRapida] = useState(false);
+  const [ventaRapidaForm, setVentaRapidaForm] = useState({
+    marca: '',
+    modelo: '',
+    precio: '',
+    precio_costo: '',
+    fecha_venta: new Date().toISOString().split('T')[0],
+    cliente: 'VENTA EXTERNA',
+    destino: ''
+  });
 
 // Asegúrate de que esta línea diga "inventario"
 const handlePrecioChange = async (id, nuevoPrecio) => {
@@ -26,11 +38,87 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
   }
 };
 
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setFiltroFecha("");
+  };
+
+  const handleVentaRapidaChange = (e) => {
+    const { name, value } = e.target;
+    setVentaRapidaForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGuardarVentaRapida = async (e) => {
+    e.preventDefault();
+    setCargandoVentaRapida(true);
+
+    const { marca, modelo, precio, precio_costo, fecha_venta, cliente, destino } = ventaRapidaForm;
+
+    if (!marca || !precio || !precio_costo || !fecha_venta) {
+      alert("Por favor, complete los campos requeridos: Fecha, Marca, Precio de Venta y Precio de Costo.");
+      setCargandoVentaRapida(false);
+      return;
+    }
+
+    const vVenta = Number(precio);
+    const vCosto = Number(precio_costo);
+    const utilidad = vVenta - vCosto;
+
+    const [y, m, d] = fecha_venta.split('-');
+    const fechaFormateada = `${parseInt(d)}/${parseInt(m)}/${y}`;
+
+    const nuevaVenta = {
+      marca: marca.toUpperCase(),
+      modelo: modelo.toUpperCase() || 'EXTERNO',
+      precio: vVenta,
+      precio_costo: vCosto,
+      utilidad: utilidad,
+      fecha_venta: fechaFormateada,
+      fecha_despacho: fechaFormateada,
+      cliente: cliente.toUpperCase() || 'VENTA EXTERNA',
+      destino: destino.toUpperCase() || 'LIMA',
+      estado: 'VENDIDO',
+      estado_despacho: 'DESPACHADO',
+      serial: `EXT-${Date.now()}`,
+      responsable_venta: usuarioLogueado?.nombre || 'Sistema',
+      responsable_despacho: usuarioLogueado?.nombre || 'Sistema',
+      vendedor_final: usuarioLogueado?.nombre || 'Sistema',
+      fecha: fechaFormateada,
+      responsable: usuarioLogueado?.nombre || 'Sistema',
+    };
+
+    try {
+      await addDoc(collection(db, "inventario"), nuevaVenta);
+      alert('✅ Venta rápida registrada con éxito.');
+      setMostrarModalVentaRapida(false);
+      setVentaRapidaForm({ marca: '', modelo: '', precio: '', precio_costo: '', fecha_venta: new Date().toISOString().split('T')[0], cliente: 'VENTA EXTERNA', destino: '' });
+    } catch (error) {
+      console.error("Error al registrar venta rápida:", error);
+      alert('❌ Hubo un error al registrar la venta: ' + error.message);
+    } finally {
+      setCargandoVentaRapida(false);
+    }
+  };
+
   const despachosHechos = useMemo(() => {
     return laptops.filter(lap => 
       lap.estado?.toUpperCase() === 'VENDIDO' && 
       lap.estado_despacho?.toUpperCase() === 'DESPACHADO'
     ).filter(lap => {
+      // Filtro por fecha
+      if (filtroFecha) {
+        const [year, month, day] = filtroFecha.split('-');
+        const f1 = `${parseInt(day, 10)}/${parseInt(month, 10)}/${year}`;
+        const pad = (num) => String(num).padStart(2, '0');
+        const f2 = `${pad(day)}/${pad(month)}/${year}`;
+        
+        const fechaParaFiltrar = lap.fecha_despacho || lap.fecha_venta;
+
+        if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
+          return false;
+        }
+      }
+
       if (!busqueda) return true;
       const texto = busqueda.toLowerCase();
       return (
@@ -40,7 +128,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
         lap.marca?.toLowerCase().includes(texto)
       );
     });
-  }, [laptops, busqueda]);
+  }, [laptops, busqueda, filtroFecha]);
 
   const abrirGuiaEnvio = (laptop) => {
     setEquipoDetalle(laptop);
@@ -87,15 +175,33 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     <div className="ventas-view-container fade-in">
       <div className="section-header">
         <h2 style={{ color: '#fff', margin: 0 }}>📦 HISTORIAL DE SALIDAS</h2>
-        <div className="search-box-ventas">
-          {busqueda === "" && <Search size={18} className="search-icon" />}
+        <div className="header-controls-ventas mobile-stack">
+          <button className="btn-ver-todo-ventas" onClick={limpiarFiltros}>
+            <RotateCcw size={16} /> Ver Todo
+          </button>
+          <button
+            className="btn-ver-todo-ventas"
+            onClick={() => setMostrarModalVentaRapida(true)}
+            style={{ background: '#00ff7f', color: '#0f172a', borderColor: '#00ff7f' }}
+          >
+            <PlusCircle size={16} /> Venta Rápida
+          </button>
           <input
-            type="text"
-            placeholder="Buscar por cliente, destino o serial..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className={`input-busqueda-ventas ${busqueda === "" ? "con-lupa" : "sin-lupa"}`}
+            type="date"
+            value={filtroFecha}
+            onChange={(e) => setFiltroFecha(e.target.value)}
+            className="input-calendar-ventas"
           />
+          <div className="search-box-ventas">
+            {busqueda === "" && <Search size={18} className="search-icon" />}
+            <input
+              type="text"
+              placeholder="Buscar por cliente, destino o serial..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className={`input-busqueda-ventas ${busqueda === "" ? "con-lupa" : "sin-lupa"}`}
+            />
+          </div>
         </div>
       </div>
 
@@ -241,6 +347,58 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                 Descargar PDF
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarModalVentaRapida && (
+        <div className="overlay-informe-leonidas" onClick={() => setMostrarModalVentaRapida(false)}>
+          <div className="modal-panel-venta-rapida" onClick={e => e.stopPropagation()}>
+            <h3>⚡ Registro de Venta Rápida</h3>
+            <p>Registra una venta externa para el control de ganancias.</p>
+            <form onSubmit={handleGuardarVentaRapida}>
+              <div className="form-campo-rapido">
+                <label>Fecha de Venta</label>
+                <input name="fecha_venta" type="date" value={ventaRapidaForm.fecha_venta} onChange={handleVentaRapidaChange} required />
+              </div>
+              <div className="form-grid-rapido">
+                <div className="form-campo-rapido">
+                  <label>Marca</label>
+                  <input name="marca" placeholder="Ej: HP, Lenovo" value={ventaRapidaForm.marca} onChange={handleVentaRapidaChange} required />
+                </div>
+                <div className="form-campo-rapido">
+                  <label>Modelo</label>
+                  <input name="modelo" placeholder="(Opcional)" value={ventaRapidaForm.modelo} onChange={handleVentaRapidaChange} />
+                </div>
+              </div>
+              <div className="form-grid-rapido">
+                <div className="form-campo-rapido">
+                  <label>Precio de Venta (S/)</label>
+                  <input name="precio" type="number" step="0.01" placeholder="0.00" value={ventaRapidaForm.precio} onChange={handleVentaRapidaChange} required />
+                </div>
+                <div className="form-campo-rapido">
+                  <label>Precio de Costo (S/)</label>
+                  <input name="precio_costo" type="number" step="0.01" placeholder="0.00" value={ventaRapidaForm.precio_costo} onChange={handleVentaRapidaChange} required />
+                </div>
+              </div>
+              <div className="form-grid-rapido">
+                <div className="form-campo-rapido">
+                  <label>Cliente</label>
+                  <input name="cliente" placeholder="(Opcional)" value={ventaRapidaForm.cliente} onChange={handleVentaRapidaChange} />
+                </div>
+                <div className="form-campo-rapido">
+                  <label>Destino</label>
+                  <input name="destino" placeholder="Ej: AREQUIPA" value={ventaRapidaForm.destino} onChange={handleVentaRapidaChange} />
+                </div>
+              </div>
+              
+              <div className="botones-rapido">
+                <button type="button" className="btn-cancelar-rapido" onClick={() => setMostrarModalVentaRapida(false)}>Cancelar</button>
+                <button type="submit" className="btn-guardar-rapido" disabled={cargandoVentaRapida}>
+                  {cargandoVentaRapida ? 'Guardando...' : 'Guardar Venta'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
