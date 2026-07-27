@@ -570,7 +570,7 @@ const RegistroVentasView = ({
               )}
             </div>
 
-            {tienePermiso && tienePermiso('ASIGNAR_PRECIOS') ? (
+            {usuarioLogueado?.rol === 'super_admin' || (tienePermiso && tienePermiso('ASIGNAR_PRECIOS')) ? (
                 <div className={styles.campo}>
                     <label style={{ color: '#00ff7f' }}>
                       PRECIO COSTO (S/.)
@@ -584,7 +584,7 @@ const RegistroVentasView = ({
             )}
             
             <div className={styles.campo}>
-                {tienePermiso && tienePermiso('ASIGNAR_PRECIOS') ? ( // Este es el campo PRECIO VENTA
+                {usuarioLogueado?.rol === 'super_admin' || (tienePermiso && tienePermiso('ASIGNAR_PRECIOS')) ? ( // Este es el campo PRECIO VENTA
                     <div className={styles.campo} style={{ gridColumn: 'span 2' }}> {/* Hace que abarque 2 columnas */}
                         <label>PRECIO DE VENTA (S/.)</label>
                         <input type="number" name="precio" value={form.precio} onChange={manejarCambio} style={{ height: '50px', fontSize: '1.2rem' }} />
