@@ -1,0 +1,319 @@
+.reporteContainer {
+  padding: 25px;
+  background-color: #020617;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+}
+
+.reportHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.mainTitle {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.subTitle {
+  margin: 5px 0 0 0;
+  font-size: 1rem;
+  color: #94a3b8;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.datePicker {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #fff !important;
+  padding: 10px 15px !important;
+  border-radius: 8px !important;
+  font-weight: 600;
+  cursor: pointer;
+  color-scheme: dark;
+}
+
+.printButton {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.printButton:hover {
+  background-color: #2563eb;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.statCard {
+  background-color: #0f172a;
+  padding: 20px;
+  border-radius: 12px;
+  border-left: 5px solid var(--card-color, #334155);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.cardIcon {
+  background-color: rgba(255, 255, 255, 0.05);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--card-color, #94a3b8);
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTitle {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.cardValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.fullWidthTableSection {
+  margin-bottom: 30px;
+}
+
+.bottomGridSection {
+  display: grid;
+  /* En pantallas grandes, dos columnas. En pequeñas, una sola. */
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 30px;
+}
+
+.tableContainer {
+  background-color: #0f172a;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #1e293b;
+}
+
+.tableTitle {
+  margin: 0 0 15px 0;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.reportTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.reportTable th, .reportTable td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #1e293b;
+}
+
+.reportTable th {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.reportTable td {
+  color: #cbd5e1;
+}
+
+.reportTable tbody tr:hover {
+  background-color: #1e293b;
+}
+
+.reportTable td:first-child, .reportTable th:first-child {
+  text-align: center;
+  width: 50px;
+}
+
+.reportTable td:last-child, .reportTable th:last-child {
+  text-align: right;
+}
+
+@media print {
+  /* --- CONFIGURACIÓN GENERAL DE IMPRESIÓN --- */
+  body {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultamos todo por defecto */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Mostramos solo el contenedor del reporte y su contenido */
+  .reporteContainer, .reporteContainer * {
+    visibility: visible;
+  }
+
+  .reporteContainer {
+    position: static; /* Dejamos que fluya normalmente */
+    margin: 20mm; /* Margen de impresión estándar */
+    padding: 0;
+    width: auto;
+    background-color: white;
+    color: black;
+    font-size: 10pt; /* Tamaño de fuente base para impresión */
+  }
+
+  /* Ocultamos elementos no deseados */
+  .headerControls, .printButton, .chartContainer, .cardIcon {
+    display: none !important;
+  }
+
+  /* Evitamos que los elementos se partan entre páginas */
+  .reportHeader, .statsGrid, .tableContainer {
+    page-break-inside: avoid;
+  }
+
+  /* --- ESTILOS SIMPLES Y EN BLANCO Y NEGRO --- */
+  .mainTitle {
+    font-size: 18pt !important;
+    color: black !important;
+    border-bottom: 2px solid black;
+    padding-bottom: 5px;
+  }
+
+  .subTitle {
+    font-size: 11pt !important;
+    color: #333 !important;
+  }
+
+  /* Convertimos las tarjetas en una tabla de resumen simple */
+  .statsGrid {
+    grid-template-columns: 1fr 1fr !important; /* Dos columnas */
+    border: 1px solid black;
+    margin-bottom: 20px;
+  }
+
+  .statCard {
+    background-color: white !important;
+    border: none !important;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 8px !important;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .cardTitle {
+    font-size: 9pt !important;
+    color: #333 !important;
+    font-weight: normal;
+  }
+
+  .cardValue {
+    font-size: 12pt !important;
+    color: black !important;
+    font-weight: bold;
+  }
+
+  /* Estilo de tabla tipo Excel */
+  .tableContainer {
+    border: none !important;
+    box-shadow: none !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  .tableTitle {
+    font-size: 12pt !important;
+    color: black !important;
+    margin-bottom: 5px;
+  }
+
+  .reportTable {
+    border: 1px solid black !important;
+  }
+
+  .reportTable th, .reportTable td {
+    border: 1px solid black !important; /* Bordes para todas las celdas */
+    padding: 6px 8px !important;
+    color: black !important;
+  }
+
+  .reportTable th {
+    background-color: #eee !important; /* Fondo gris claro para encabezados */
+    font-size: 9pt !important;
+    color: black !important;
+    font-weight: bold;
+  }
+
+  .reportTable td {
+    font-size: 9pt !important;
+  }
+
+  .reportTable tbody tr:hover {
+    background-color: transparent !important; /* Sin efecto hover al imprimir */
+  }
+}
+
+/* --- NUEVO: Estilos para el contenedor del gráfico --- */
+.chartContainer {
+  background-color: #0f172a;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #1e293b;
+}
+
+.chartWrapper {
+  position: relative;
+  height: 350px; /* Altura fija para el gráfico */
+}
+
+.noChartData {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #64748b;
+  text-align: center;
+  font-size: 0.9rem;
+}
