@@ -1,0 +1,386 @@
+/* HojaReportes.module.css */
+
+/* --- CONTENEDOR PRINCIPAL --- */
+.reportesContainer {
+    padding: 0px 30px 20px 30px !important; /* <--- Quitamos el aire de arriba */
+    background-color: #020617; 
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+}
+
+.reportesHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px !important; /* <--- Espacio mínimo antes de los botones */
+    margin-bottom: 0px;
+}
+
+.reportesTitle {
+    color: #f8fafc;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 !important;   /* <--- Quitamos el margen del texto */
+    padding-top: 10px;      /* Controlamos el aire manualmente */
+}
+
+/* --- FILTROS E INPUTS --- */
+.reportesControls {
+    display: flex;
+    gap: 12px;
+}
+
+.inputBusqueda {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    width: 250px; /* Tamaño normal para el buscador */
+}
+
+.inputFecha {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    color: white;
+    padding: 8px 10px; 
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    
+    /* CAMBIOS AQUÍ */
+    width: 130px !important;      /* Esto le da el ancho corto */
+    min-width: 130px !important;  /* Evita que se estire */
+    flex: none !important;         /* Obliga a que no crezca si sobra espacio */
+}
+
+.btnExcel {
+    background-color: #16a34a;
+    color: white;
+    border: none;
+    padding: 8px 35px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btnExcel:hover {
+    background-color: #15803d;
+}
+
+/* --- TABS DE ESTADO --- */
+.estadoTabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    background: rgba(30, 41, 59, 0.3);
+    padding: 8px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.estadoTabs button {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.estadoTabs button.active { background: #f8fafc; color: #0f172a; }
+
+/* --- TABLA DISEÑO SLIM PERO LEGIBLE --- */
+.tableWrapper {
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.leonidasTable {
+    width: 100%;
+    border-spacing: 0; 
+    border-collapse: collapse;
+    font-size: 14px; 
+    color: #cbd5e1;
+}
+
+.leonidasTable th {
+    padding: 10px 15px;
+    color: #94a3b8;
+    font-size: 11px;
+    text-transform: uppercase;
+    text-align: left;
+    letter-spacing: 0.08em;
+}
+/* FILA TIPO TARJETA */
+.leonidasRow {
+    background: #0f172a;
+    transition: all 0.2s ease;
+}
+
+.leonidasRow:hover {
+    background: #1e293b;
+    transform: translateX(4px);
+}
+
+.leonidasRow td {
+    padding: 10px 15px; 
+    border-top: 1px solid #1e293b;
+    border-bottom: 1px solid #1e293b;
+    vertical-align: middle;
+}
+
+.leonidasRow td:first-child {
+    border-left: 1px solid #1e293b; 
+}
+
+.leonidasRow td:last-child {
+    border-right: 1px solid #1e293b; 
+}
+
+/* --- ESTILOS DE DATOS --- */
+.tdNum { color: #64748b; font-weight: 800; text-align: center; width: 40px; font-size: 12px; }
+.tdFecha { color: #cbd5e1; white-space: nowrap; font-size: 13px; }
+.tdVendedor { color: #60a5fa; font-weight: 600; font-size: 14px; }
+.tdLaptop strong { color: #ffffff; display: block; font-size: 15px; line-height: 1.3; }
+.tdSerial { font-family: 'JetBrains Mono', monospace; color: #94a3b8; font-size: 12px; }
+.tdPrecio { color: #ffffff; font-weight: 700; font-size: 15px; }
+
+/* --- TECNOLOGÍA (CHIPS) --- */
+.tdTech { color: #cbd5e1; }
+.tdTech small {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+/* --- SELECT DE ESTADO (CORRECCIÓN DEFINITIVA) --- */
+.selectReporte {
+    padding: 0 8px; /* Sin padding vertical para que el texto no se oculte */
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 11px; 
+    font-weight: 900;
+    cursor: pointer;
+    width: 105px; 
+    height: 28px; 
+    outline: none;
+    text-align: center;
+    text-align-last: center; /* Centrado para Chrome */
+    text-transform: uppercase;
+    appearance: none; /* Evita que la flecha nativa oculte espacio */
+    transition: all 0.2s ease;
+}
+
+/* Colores con alto contraste y !important */
+.stock { 
+    background: rgba(34, 197, 94, 0.25) !important; 
+    color: #4ade80 !important; 
+    border: 1px solid rgba(74, 222, 128, 0.4) !important; 
+}
+.vendido { 
+    background: rgba(239, 68, 68, 0.25) !important; 
+    color: #f87171 !important; 
+    border: 1px solid rgba(248, 113, 113, 0.4) !important; 
+}
+.separado { 
+    background: rgba(234, 179, 8, 0.25) !important; 
+    color: #facc15 !important; 
+    border: 1px solid rgba(250, 204, 21, 0.4) !important; 
+}
+
+/* Estilo para las opciones del menú desplegable */
+.selectReporte option {
+    background-color: #0f172a;
+    color: #ffffff;
+}
+
+/* --- ACCIONES --- */
+.accionesFlex {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.accionesFlex button {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid #334155;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    color: #cbd5e1;
+}
+
+.accionesFlex button:hover {
+    background: #334155;
+    border-color: #60a5fa;
+    color: #60a5fa;
+    transform: scale(1.1);
+}
+
+.lockIcon {
+    font-size: 12px;
+    color: #64748b;
+    opacity: 0.7;
+}
+/* Ocultar la barra de desplazamiento en Chrome, Safari y Opera */
+.excel-table-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ocultar la barra de desplazamiento en Firefox e IE */
+.excel-table-wrapper {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.searchContainer {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.searchInput {
+  flex: 1; /* Hace que el buscador ocupe todo el espacio sobrante */
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+.btnVerTodo {
+  padding: 10px 15px;
+  background-color: #3498db; /* Azul corporativo */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap; /* Evita que el texto se parta en dos líneas */
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.btnVerTodo:hover {
+  background-color: #2980b9;
+}
+
+/* Optimización para Móviles */
+@media (max-width: 768px) {
+  .btnVerTodo {
+    padding: 10px;
+    font-size: 14px;
+  }
+}
+/* HojaReportes.module.css */
+@media (max-width: 768px) {
+  /* 1. Apilar controles de búsqueda y fecha */
+  .reportesHeader {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+
+  .reportesControls {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr; /* El buscador arriba y botones/fecha abajo */
+    gap: 8px;
+  }
+
+  /* 2. Forzar scroll horizontal en la tabla para que no se rompa */
+  .tableWrapper {
+    overflow-x: auto !important;
+    display: block;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .leonidasTable {
+    min-width: 900px; /* Obliga a la tabla a mantener su forma y activar el scroll */
+    font-size: 11px !important; /* Fuente más pequeña para móviles */
+  }
+}
+/* --- CONTENEDOR DE TARJETAS TIPO DASHBOARD --- */
+.contenedorEstadisticasAnuales {
+  display: grid;
+ grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 15px;
+  padding: 10px 0;
+}
+
+.tarjetaAnual {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  padding: 10px 15px;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.tarjetaAnual:hover {
+  transform: translateY(-5px);
+}
+
+/* Efecto de luz en la parte superior */
+.tarjetaAnual::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--color-borde);
+}
+
+.infoTarjeta span {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.valorContainer {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.infoTarjeta h3 {
+  font-size: 32px;
+  margin: 0;
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.unidad {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .contenedorEstadisticasAnuales {
+    grid-template-columns: 1fr;
+  }
+}
