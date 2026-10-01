@@ -1,0 +1,1951 @@
+/* ============================================================
+   ESTILOS GENERALES Y CABECERA
+   ============================================================ */
+
+.ventas-view-container {
+  padding: 20px;
+  background-color: #020617; /* Fondo ultra oscuro */
+  min-height: 100vh;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between; /* Título a la izquierda, controles a la derecha */
+  align-items: center;
+  padding: 20px;
+  background: #0f1116;
+  border-bottom: 1px solid #2d333b;
+  flex-wrap: wrap; /* Para que en pantallas chicas no se rompa */
+  gap: 15px;
+  margin-bottom: 20px; /* AÑADIDO: Espacio extra debajo de la cabecera principal */
+}
+
+.header-controls-ventas {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Espacio uniforme entre Botón, Calendario y Buscador */
+}
+
+.report-btn-wa {
+  border: 2px solid #25d366;
+  color: #25d366;
+  background: rgba(37, 211, 102, 0.1);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.report-btn-wa:hover {
+  background: #25d366;
+  color: white;
+}
+
+/* ============================================================
+   SECCIÓN DE BÚSQUEDA (EL BUSCADOR Y LOS FILTROS)
+   ============================================================ */
+
+.seccion-busqueda-ventas {
+  display: flex;
+  flex-direction: row; 
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  background: #111827;
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid #1f2937;
+  margin-bottom: 20px;
+  flex-wrap: wrap; 
+}
+
+.busqueda-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 350px; 
+  flex: 2;
+}
+
+.busqueda-wrapper .icono-lupa {
+  position: absolute;
+  left: 18px;
+  z-index: 10;
+  pointer-events: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+}
+
+.input-ventas-moderno {
+  width: 100%;
+  height: 48px;
+  background-color: #030712 !important;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  color: white;
+  padding-left: 55px !important; 
+  outline: none;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.input-ventas-moderno:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================================
+   CONTROLES ADICIONALES (FECHA Y BOTONES)
+   ============================================================ */
+
+.controles-adicionales-ventas {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.grupo-fecha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grupo-fecha label {
+  color: #94a3b8;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.input-fecha-ventas {
+  padding: 10px;
+  border-radius: 8px;
+  background: #030712;
+  border: 1px solid #374151;
+  color: white;
+  outline: none;
+  cursor: pointer;
+}
+
+.btn-ver-todo-ventas {
+  background: #2d333b;
+  color: #00ff7f; /* Verde neón de Leonidas Store */
+  border: 1px solid #3f4451;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  transition: 0.3s;
+}
+
+.btn-ver-todo-ventas:hover {
+  background: #3f4451;
+  transform: translateY(-1px);
+}
+
+.input-calendar-ventas {
+  background: #1a1d23;
+  color: white;
+  border: 1px solid #3f4451;
+  padding: 7px 10px;
+  border-radius: 6px;
+  outline: none;
+  font-family: inherit;
+}
+/* ============================================================
+   ESTADÍSTICAS Y TABLA
+   ============================================================ */
+
+.stats-bar-ventas {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: inline-block;
+  font-weight: bold;
+  font-size: 13px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  margin-bottom: 20px;
+}
+
+.contenedor-filtros-marcas {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scrollbar-width: none;
+}
+
+.btn-marca {
+  padding: 8px 20px;
+  border-radius: 25px; 
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.btn-marca.active-marca {
+  background: #3b82f6; 
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-vender-ahora {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-vender-ahora:hover {
+  transform: scale(1.05);
+  background: #059669;
+}
+
+.tag-vendido {
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.tag-pendiente {
+  color: #f59e0b; /* Naranja */
+  font-weight: bold;
+  font-size: 12px;
+}
+/* ============================================================
+   NUEVOS ESTILOS PARA EL INFORME TÉCNICO (MODAL)
+   ============================================================ */
+
+.overlay-informe-leonidas {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85); /* Fondo oscuro */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Super importante para que flote sobre todo */
+}
+
+.contenedor-informe-factura {
+  background: white;
+  color: #1f2937;
+  /* OCUPAR CASI TODA LA PANTALLA */
+  width: 98% !important; 
+  height: 95vh !important; /* 95% del alto de la pantalla */
+  
+  max-width: 1400px !important; /* Límite para que no se deforme en monitores gigantes */
+  border-radius: 12px;
+  box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+  
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden; /* El scroll lo manejará el cuerpo */
+  animation: modalEntradaRapida 0.2s ease-out;
+}
+
+@keyframes modalEntradaRapida {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* AJUSTES PARA QUE EL CONTENIDO SE VEA GRANDE Y PROFESIONAL */
+.cuerpo-informe {
+  padding: 50px 80px !important; /* Mucho aire a los lados */
+  flex-grow: 1;
+  overflow-y: auto; /* Si hay mucha info, sale scroll interno */
+}
+
+/* GRID DE DETALLES EN FORMATO GRANDE */
+.grid-detalles-factura {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px !important;
+  margin-top: 30px;
+}
+
+/* ETIQUETAS Y TEXTOS */
+.item-detalle label {
+  font-size: 1rem !important;
+  color: #64748b;
+  letter-spacing: 1px;
+}
+
+.item-detalle p {
+  font-size: 1.6rem !important; /* Texto muy legible */
+  margin-top: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* PRECIO GIGANTE */
+.item-detalle-precio {
+  grid-column: span 2;
+  background: #f0fdf4;
+  padding: 30px;
+  border-radius: 20px;
+  border: 2px solid #10b981;
+  margin-top: 20px;
+}
+
+.item-detalle-precio label {
+  font-size: 1.2rem !important;
+  color: #047857;
+}
+
+.item-detalle-precio h3 {
+  font-size: 5rem !important; /* Precio impacto total */
+  margin: 10px 0 0;
+  color: #10b981;
+}
+
+/* PIE DE PÁGINA FIJO ABAJO */
+.footer-informe {
+  padding: 30px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-accion-imprimir {
+  font-size: 1.2rem;
+  padding: 15px 40px;
+  border-radius: 50px; /* Botón tipo cápsula */
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.header-informe {
+  background: #1e293b;
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-leonidas h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: #00ff7f; /* Color Leonidas */
+}
+
+.logo-leonidas p {
+  font-size: 0.8rem;
+  margin: 0;
+  opacity: 0.8;
+}
+
+.btn-cerrar-informe {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 5px;
+  transition: transform 0.2s;
+}
+
+.btn-cerrar-informe:hover {
+  transform: scale(1.2);
+  color: #ef4444;
+}
+
+.cuerpo-informe {
+  padding: 25px;
+}
+
+.titulo-seccion-informe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #334155;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 10px;
+}
+
+.grid-detalles-factura {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.item-detalle label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.item-detalle p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.item-detalle-precio {
+  grid-column: span 2;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+}
+
+.item-detalle-precio h3 {
+  margin: 5px 0 0;
+  font-size: 2rem;
+  color: #10b981;
+}
+
+.footer-informe {
+  padding: 20px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-informe {
+  padding: 30px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.grupo-botones-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 15px; /* Espacio entre los botones */
+  width: 100%;
+}
+
+.grupo-botones-acciones button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  color: white;
+}
+
+/* Colores */
+.btn-accion-imprimir { background: #3b82f6; }
+.btn-accion-pdf { background: #ef4444; }
+.btn-accion-whatsapp { background: #25d366; }
+
+.grupo-botones-acciones button:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.1);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.input-nombre-cliente {
+  width: 100%;
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #ffd700;
+  color: white;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+.seccion-formulario-venta {
+  padding: 20px;
+  background: rgba(255, 215, 0, 0.05);
+  border-radius: 8px;
+}
+/* =========================================
+   DISEÑO FORMAL DE BOLETA (ESTILO FACTURA)
+   ========================================= */
+
+/* Contenedor principal del Modal */
+.overlay-informe-leonidas {
+  background-color: rgba(0, 0, 0, 0.85); /* Fondo oscuro para resaltar la boleta */
+}
+
+/* El documento en sí (Blanco y Formal) */
+.contenedor-boleta-formal {
+  background-color: #1e293b; /* Fondo oscuro */
+  color: white; /* Texto blanco sobre fondo oscuro */
+  width: 200mm; /* Ancho A4 simulado */
+  max-width: 800px;
+  min-height: auto; /* Alto A4 simulado */
+  margin: 20px auto;
+  /* Padding interno: el membrete (logo + N° de documento) nunca pega con el borde superior */
+  padding: 15px 18px;
+  border-radius: 0px; /* Bordes cuadrados */
+  box-shadow: none; /* Eliminar sombra para diseño plano */
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Tipografía limpia */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #334155; /* Borde sutil para el contenedor */
+}
+
+/* Cabecera Formal: membrete flexible que nunca se sale de los límites */
+.header-boleta-formal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #334155; /* Borde más sutil */
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+/* Bloque de la empresa (logo + datos de contacto) */
+.info-empresa {
+  flex: 1 1 auto;
+  min-width: 0; /* Permite encoger sin desbordar el membrete */
+}
+
+/* Logo del membrete: dimensiones controladas (nunca se recorta)
+   background-size: contain mantiene la proporción original (equivalente a
+   object-fit: contain): la caja puede crecer, la imagen NUNCA se deforma. */
+.logo-finpro-comprobante {
+  width: 240px;              /* antes 190px  (+26%) */
+  max-width: 52%; /* No invade el recuadro del número de documento */
+  height: 126px;             /* antes 100px  (+26%) */
+  max-height: 126px;
+  flex: 0 0 auto;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: left center;
+  margin-bottom: 4px;
+}
+
+.logo-leonidas-formal {
+  color: #00ff7f; /* Verde neón */
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -1px;
+}
+
+.info-empresa p, .info-empresa h1 {
+  margin: 2px 0;
+  color: #94a3b8; /* Texto suave */
+  font-size: 0.9rem;
+}
+
+/* Recuadro de Tipo de Documento */
+.recuadro-tipo-doc {
+  border: 1px solid #334155; /* Borde sutil */
+  padding: 15px 30px;
+  text-align: center;
+  border-radius: 0px; /* Bordes cuadrados */
+  background-color: #0f172a; /* Fondo oscuro */
+}
+
+.recuadro-tipo-doc h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: white;
+}
+
+.recuadro-tipo-doc h3 {
+  margin: 2px 0;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: white;
+}
+
+.numero-doc {
+  margin: 10px 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
+  font-family: 'Courier New', Courier, monospace; /* Estilo preimpreso */
+}
+
+.btn-cerrar-boleta {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+}
+.btn-cerrar-boleta:hover { color: white; }
+
+/* Sección Datos Cliente (compacta para dejar aire al detalle del lote) */
+.seccion-datos-cliente {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background-color: #0f172a; /* Fondo oscuro */
+  border: 1px solid #334155; /* Borde sutil */
+  border-radius: 0px; /* Bordes cuadrados */
+}
+
+.dato-cliente-fila {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 0.88rem;
+}
+
+.icono-dato {
+  color: #94a3b8; /* Gris suave */
+  margin-right: 10px;
+}
+
+.dato-cliente-fila label {
+  font-weight: 600;
+  color: #94a3b8; /* Gris suave */
+  width: 135px;
+}
+
+.dato-cliente-fila span {
+  color: white; /* Blanco */
+  font-weight: 500;
+}
+
+/* Tabla de Ítems Estilo Factura (compacta para lotes con muchos equipos) */
+.tabla-items-boleta {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+  font-size: 0.84rem;
+}
+
+.tabla-items-boleta thead th {
+  background-color: #0f172a; /* Fondo oscuro */
+  color: white; /* Texto blanco */
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid #334155; /* Borde sutil */
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tabla-items-boleta tbody td {
+  padding: 6px 8px;
+  border: 1px solid #334155; /* Borde sutil */
+  vertical-align: top;
+  color: white; /* Texto blanco */
+  line-height: 1.3;
+}
+
+.tabla-items-boleta tbody td strong {
+  font-size: 0.8rem;
+}
+
+.tabla-items-boleta tbody td small {
+  color: #94a3b8; /* Gris suave */
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+/* ============================================================
+   COMPACTACIÓN INTELIGENTE DEL COMPROBANTE (LOTES GRANDES)
+   Las celdas del detalle traen padding/tamaño en línea desde el
+   JSX; aquí se refuerzan con !important SOLO dentro del documento
+   para que 7+ equipos respiren sin perder legibilidad.
+   ============================================================ */
+.contenedor-boleta-formal .tabla-items-boleta thead th,
+.contenedor-boleta-formal .tabla-items-boleta tfoot td {
+  padding: 5px 8px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+
+.contenedor-boleta-formal .tabla-items-boleta tbody td {
+  padding: 5px 8px !important;
+  line-height: 1.3 !important;
+}
+
+.contenedor-boleta-formal .tabla-items-boleta tbody td strong {
+  font-size: 11px !important; /* Marca / modelo: siempre legible */
+}
+
+/* Especificaciones secundarias (procesador, RAM, disco, S/N, código) */
+.contenedor-boleta-formal .tabla-items-boleta tbody td small,
+.contenedor-boleta-formal .tabla-items-boleta tbody td span {
+  font-size: 9.5px !important;
+  line-height: 1.35 !important;
+}
+
+.monto {
+  text-align: right;
+  width: 120px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #00ff7f; /* Verde neón para montos */
+}
+
+.total-fila {
+  font-weight: 700;
+}
+
+/* Sección Totales */
+.contenedor-totales-boleta {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 40px;
+}
+
+.total-fila-resumen {
+  display: flex;
+  align-items: center;
+  width: 300px;
+  padding: 10px 0;
+}
+
+.total-fila-resumen.final {
+  border-top: 1px solid #334155; /* Borde sutil */
+  padding-top: 15px;
+}
+
+.total-fila-resumen label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #94a3b8; /* Gris suave */
+  flex: 1;
+  text-align: right;
+  margin-right: 15px;
+}
+
+.monto-final {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #00ff7f; /* Verde neón */
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Pie de Boleta */
+.pie-boleta-formal {
+  margin-top: auto; /* Empuja al fondo */
+  padding-top: 8px;
+  border-top: 1px solid #334155; /* Borde sutil */
+  color: #94a3b8; /* Gris suave */
+  font-size: 0.8rem;
+}
+.pie-boleta-formal p { margin: 3px 0; }
+
+/* Botones de Acción (Estilo para fondo oscuro del modal) */
+.grupo-botones-boleta-no-imprimir {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #334155; /* Borde sutil */
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+/* Estilo para los botones en modo 'no venta' */
+.btn-formal-imprimir, .btn-formal-vender, .btn-formal-confirmar, .btn-formal-cancelar {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 0px; /* Bordes cuadrados */
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-formal-imprimir { background-color: #334155; color: #fff; }
+.btn-formal-imprimir:hover { background-color: #475569; }
+
+.btn-formal-vender { background-color: #00ff7f; color: #0f172a; }
+.btn-formal-vender:hover { background-color: #00e672; }
+
+/* Contenedor modo venta */
+.contenedor-confirmar-venta-formal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.input-nombre-cliente-formal {
+  width: 400px;
+  max-width: 90%;
+  padding: 12px;
+  border: 1px solid #334155; /* Borde sutil */
+  border-radius: 0px; /* Bordes cuadrados */
+  background-color: #0f172a; /* Fondo oscuro */
+  color: #fff; /* Texto blanco para el input sobre fondo oscuro */
+  font-size: 1rem;
+}
+.input-nombre-cliente-formal::placeholder { color: rgba(255,255,255,0.5); }
+
+.btn-formal-confirmar { background-color: #00ff7f; color: #0f172a; width: 400px; justify-content: center; }
+.btn-formal-confirmar:hover { background-color: #00e672; }
+
+.btn-formal-cancelar { background-color: #ef4444; color: white; border: none; }
+.btn-formal-cancelar:hover { background-color: #cc0000; }
+
+
+/* Estilo para la X de cierre para que no flote mal */
+.btn-cerrar-boleta-esquina {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #0f172a; /* Fondo oscuro */
+    border-radius: 0px; /* Cuadrado */
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 5px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* ============================================================================
+   CONFIGURACIÓN DE IMPRESIÓN DEL COMPROBANTE / GUÍA (A4 · TODO EN 1 SOLA HOJA)
+   ----------------------------------------------------------------------------
+   ¿Por qué antes salía una hoja en blanco?  `body * { visibility: hidden }`
+   ocultaba la app pero NO la sacaba del flujo: la cabecera, la tabla completa y
+   la paginación seguían ocupando su altura y empujaban el comprobante a la
+   hoja 2.  Ahora la aplicación se oculta con display:none (no ocupa nada) y el
+   documento arranca siempre en la PRIMERA hoja.
+   Los comprobantes / guías se montan con createPortal en <body>, por eso basta
+   con ocultar el resto de hijos del body (regla con :has()).
+   ============================================================================ */
+@media print {
+  /* Márgenes físicos del papel: ningún elemento del membrete toca el borde.
+     (Coinciden con MARGEN_LATERAL_MM / MARGEN_SUPERIOR_MM de generarPDFDocumento.js) */
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 10mm 12mm;
+  }
+
+  /* --- 1. RESET: nada de alturas de pantalla ni de scroll al imprimir --- */
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important; /* Los lotes grandes pasan de página sin recortes */
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* --- 2. LA APP NO SE IMPRIME Y NO RESERVA ESPACIO ---
+     Con :has() (Chrome/Edge 105+, Safari 15.4+, Firefox 121+) desaparece toda la
+     aplicación y sólo queda el documento abierto: se acaba la hoja en blanco. */
+  body:has(.overlay-informe-leonidas) > *:not(.overlay-informe-leonidas) {
+    display: none !important;
+  }
+
+  /* Cinturón y tirantes (válido también en navegadores sin :has()):
+     los contenedores de pantalla pierden alturas 100vh/100dvh, paddings
+     superiores, animaciones de entrada y transform. */
+  .app-viewport,
+  .main-content,
+  .inventory-view,
+  .ventas-view-container,
+  .reportesContainer,
+  .excel-local-container,
+  .fade-in {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* La vista de Ventas / Salidas ya no empuja el documento con su cabecera,
+     su tabla ni su paginación. */
+  .ventas-view-container > .section-header,
+  .ventas-view-container > .bar-multiventa,
+  .ventas-view-container > .table-wrapper-global,
+  .ventas-view-container > .paginacion-container,
+  .blue-nav {
+    display: none !important;
+  }
+
+  /* --- 3. OCULTAR TODO LO QUE NO SEA EL DOCUMENTO --- */
+  body * {
+    visibility: hidden;
+  }
+
+  /* El overlay del documento pasa a flujo normal: no centra (flex), no scrollea,
+     no ocupa la pantalla completa y no fuerza ningún salto de página. */
+  .overlay-informe-leonidas {
+    visibility: visible !important;
+    display: block !important;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    align-items: initial !important;      /* sin alineación flex vertical */
+    justify-content: initial !important;  /* sin alineación flex horizontal */
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* El documento ocupa el área imprimible: sin margen superior extra
+     (antes: margin 20px auto + paddingTop 5vh del overlay), sin min-height,
+     sin bordes ni sombras. */
+  .contenedor-boleta-formal,
+  .contenedor-guia-envio,
+  .contenedor-comprobante-despacho {
+    visibility: visible !important;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    top: auto !important;
+    left: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .contenedor-boleta-formal * {
+    visibility: visible !important;
+  }
+
+  /* --- MEMBRETE COMPACTO: logo y recuadro del documento completos, sin aire de más --- */
+  .header-boleta-formal {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 10px !important;
+    /* Logo más grande => se recorta el aire del membrete para no ganar altura
+       ni empujar el resto de la boleta a una segunda página. */
+    padding-bottom: 5px !important;   /* antes 8px */
+    margin-bottom: 6px !important;    /* antes 10px */
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .logo-finpro-comprobante {
+    width: 176px !important;       /* antes 140px  (+26%) */
+    max-width: 44% !important;     /* No invade el número de documento */
+    height: 80px !important;       /* antes 64px  (+25%) */
+    max-height: 80px !important;
+    margin-bottom: 0 !important;
+    background-position: left center !important;
+    background-size: contain !important;  /* conserva la proporción, sin deformar */
+  }
+
+  /* Los <p> vacíos del bloque de empresa solo ocupaban espacio en blanco */
+  .contenedor-boleta-formal .info-empresa p:empty {
+    display: none !important;
+  }
+
+  .info-empresa p,
+  .info-empresa h1 {
+    font-size: 0.58rem !important;   /* antes 0.62rem */
+    line-height: 1.2 !important;
+    margin: 0 0 1px 0 !important;
+  }
+
+  .recuadro-tipo-doc {
+    flex: 0 0 auto !important;
+    padding: 6px 10px !important;
+  }
+
+  .recuadro-tipo-doc h2 { font-size: 0.92rem !important; }
+  .recuadro-tipo-doc h3 { font-size: 0.78rem !important; }
+  .numero-doc { font-size: 0.92rem !important; margin-top: 3px !important; }
+
+  /* --- ESTILOS ESPECÍFICOS PARA IMPRESIÓN (COLORES OSCUROS SOBRE BLANCO) --- */
+  .contenedor-boleta-formal,
+  .contenedor-boleta-formal * {
+    color: #000 !important; /* Texto negro por defecto */
+  }
+
+  /* Cabecera */
+  .header-boleta-formal {
+    border-bottom-color: #ccc !important; /* Borde más oscuro */
+  }
+  .logo-leonidas-formal {
+    color: #000 !important; /* Logo en negro */
+  }
+  .info-empresa p, .info-empresa h1 {
+    color: #333 !important; /* Texto de información de empresa en gris oscuro */
+  }
+  .recuadro-tipo-doc {
+    background-color: #f0f0f0 !important; /* Fondo gris claro para el recuadro */
+    border-color: #ccc !important; /* Borde más oscuro */
+  }
+  .recuadro-tipo-doc h2, .recuadro-tipo-doc h3, .numero-doc {
+    color: #000 !important; /* Texto del recuadro en negro */
+  }
+
+  /* Botón de cerrar (oculto, pero por si acaso) */
+  .btn-cerrar-boleta, .btn-cerrar-boleta-esquina {
+    display: none !important;
+  }
+
+  /* Sección de datos del cliente */
+  .seccion-datos-cliente {
+    background-color: #f8f8f8 !important; /* Fondo muy claro para la sección de cliente */
+    border-color: #ddd !important; /* Borde más oscuro */
+  }
+  .icono-dato, .dato-cliente-fila label {
+    color: #555 !important; /* Iconos y etiquetas en gris oscuro */
+  }
+  .dato-cliente-fila span {
+    color: #000 !important; /* Datos del cliente en negro */
+  }
+
+  /* Tabla de ítems */
+  .tabla-items-boleta thead th {
+    background-color: #e0e0e0 !important; /* Fondo gris claro para el encabezado de tabla */
+    color: #000 !important; /* Texto del encabezado en negro */
+    border-color: #888 !important; /* Bordes más oscuros */
+  }
+  .tabla-items-boleta tbody td {
+    border-color: #ccc !important; /* Bordes de las celdas en gris */
+    color: #000 !important; /* Texto de las celdas en negro */
+  }
+  .tabla-items-boleta tbody td small {
+    color: #555 !important; /* Texto pequeño en gris oscuro */
+  }
+  .monto, .monto-final {
+    color: #000 !important; /* Montos en negro */
+  }
+  .contenedor-totales-boleta .total-fila-resumen label {
+    color: #000 !important; /* Etiqueta "TOTAL A PAGAR" en negro */
+  }
+  .total-fila-resumen.final {
+    border-top-color: #888 !important; /* Borde superior del total en gris oscuro */
+  }
+  .pie-boleta-formal {
+    color: #555 !important; /* Pie de página en gris oscuro */
+    border-top-color: #ccc !important; /* Borde superior del pie de página en gris */
+  }
+  /* --- FIN ESTILOS ESPECÍFICOS PARA IMPRESIÓN --- */
+
+  /* --- COMPACTACIÓN PARA LOTES GRANDES (7+ EQUIPOS) --- */
+  .contenedor-boleta-formal .seccion-datos-cliente {
+    padding: 6px 9px !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .contenedor-boleta-formal .dato-cliente-fila {
+    margin-bottom: 2px !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* Etiquetas más cortas para que los datos del cliente entren en una línea */
+  .contenedor-boleta-formal .dato-cliente-fila label {
+    width: 118px !important;
+  }
+
+  .contenedor-boleta-formal .tabla-items-boleta {
+    font-size: 0.72rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  .contenedor-boleta-formal .tabla-items-boleta thead th,
+  .contenedor-boleta-formal .tabla-items-boleta tfoot td {
+    padding: 3px 5px !important;
+    font-size: 9px !important;
+  }
+
+  .contenedor-boleta-formal .tabla-items-boleta tbody td {
+    padding: 3px 5px !important;
+    line-height: 1.2 !important;
+  }
+
+  .contenedor-boleta-formal .tabla-items-boleta tbody td strong {
+    font-size: 10px !important;
+  }
+
+  .contenedor-boleta-formal .tabla-items-boleta tbody td small,
+  .contenedor-boleta-formal .tabla-items-boleta tbody td span {
+    font-size: 8.8px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Cada equipo se imprime completo: nunca se corta a mitad de fila */
+  .contenedor-boleta-formal .tabla-items-boleta tbody tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .contenedor-boleta-formal .pie-boleta-formal {
+    margin-top: 4px !important;
+    padding-top: 5px !important;
+    font-size: 0.68rem !important;
+    line-height: 1.2 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* --- GARANTÍA DE "TODO EN UNA SOLA HOJA" ---
+     El documento nunca se separa del membrete ni arrastra una hoja en blanco
+     delante. Si el lote es muy grande el navegador seguirá paginando solo el
+     detalle (break-inside: auto), pero un comprobante normal sale en 1 hoja. */
+  .overlay-informe-leonidas,
+  .contenedor-boleta-formal,
+  .contenedor-guia-envio,
+  .contenedor-comprobante-despacho {
+    page-break-inside: auto !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* El membrete y los datos del cliente nunca se quedan solos al pie de la hoja */
+  .header-boleta-formal,
+  .seccion-datos-cliente,
+  .tabla-items-boleta thead {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* --- LOTES QUE PASAN A LA PÁGINA SIGUIENTE (7+ equipos) --- */
+  /* El encabezado de la tabla se repite en cada hoja para no perder el contexto */
+  .contenedor-boleta-formal .tabla-items-boleta thead,
+  .contenedor-guia-envio thead {
+    display: table-header-group !important;
+  }
+
+  /* Los totales (SUB-TOTAL / IGV / TOTAL) solo se imprimen en la última hoja */
+  .contenedor-boleta-formal .tabla-items-boleta tfoot {
+    display: table-row-group !important;
+  }
+
+  /* Ninguna fila se parte entre dos páginas (ni en el comprobante ni en la guía) */
+  .contenedor-boleta-formal .tabla-items-boleta tr,
+  .contenedor-guia-envio tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* La franja de datos del cliente y el membrete tampoco se separan del detalle */
+  .contenedor-boleta-formal .seccion-datos-cliente,
+  .contenedor-boleta-formal .header-boleta-formal,
+  .contenedor-guia-envio header {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Eliminar definitivamente botones, inputs y la X (sin romper el layout del documento) */
+  .grupo-botones-boleta-no-imprimir,
+  .grupo-botones-comprobante,
+  .selector-tipo-doc-no-imprimir,
+  .btn-cerrar-boleta,
+  .btn-cerrar-boleta-esquina,
+  .btn-cerrar-comprobante,
+  .contenedor-confirmar-venta-formal,
+  button,
+  input {
+    display: none !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+.search-box-ventas {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-grow: 1; /* Permite que el contenedor del buscador se estire */
+  min-width: 400px; /* Le damos un ancho mínimo para que nunca sea demasiado pequeño */
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #8b949e;
+  pointer-events: none;
+}
+
+.input-busqueda-ventas {
+  background: #1a1d23;
+  border: 1px solid #3f4451;
+  color: white;
+  padding: 8px 40px 8px 35px; /* Espacio extra a la izquierda para la lupa y derecha para escaner */
+  border-radius: 6px;
+  width: 100%; /* Hacemos que el input llene el contenedor (.search-box-ventas) */
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.input-busqueda-ventas:focus {
+  border-color: #00ff7f;
+}
+
+/* --- FORZAR ESPACIO DEL TEXTO PARA LA LUPA --- */
+.input-busqueda-ventas.con-lupa {
+  padding-left: 40px !important;
+}
+
+.input-busqueda-ventas.sin-lupa {
+  padding-left: 15px !important;
+}
+
+/* ============================================================
+   CHECKBOX PERSONALIZADO PARA PANEL DE DESPACHOS
+   ============================================================ */
+
+.custom-checkbox-despacho {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 20px;
+  height: 20px;
+  background-color: #1e293b;
+  border: 2px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.custom-checkbox-despacho:hover {
+  border-color: #3b82f6;
+}
+
+.custom-checkbox-despacho:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.custom-checkbox-despacho:checked::after {
+  content: '✓';
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* ============================================================
+   PAGINACIÓN (Copiado de App.css para encapsulación)
+   ============================================================ */
+.paginacion-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #0f172a;
+  border-top: 1px solid #1e293b;
+  margin-top: 20px;
+  border-radius: 12px;
+}
+
+.paginacion-info {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.paginacion-botones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paginacion-botones button {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.paginacion-botones button:hover:not(:disabled) {
+  background-color: #334155 !important;
+  border-color: #60a5fa !important;
+}
+
+.paginacion-botones button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginacion-pagina-actual {
+  color: #e2e8f0;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 0 10px;
+}
+
+.paginacion-pagina-actual {
+  padding: 0 10px;
+}
+
+/* ============================================================
+   MODAL DE VENTA RÁPIDA (AÑADIDO PARA DESPACHOSVIEW)
+   ============================================================ */
+
+.modal-panel-venta-rapida {
+  background-color: #1e293b;
+  color: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  /* Altura máxima relativa a la pantalla: el modal nunca es más alto que el backdrop */
+  max-height: 90vh;
+  max-height: 90dvh;                 /* móviles: respeta la barra del navegador */
+  overflow-y: auto;                  /* respaldo: si algo no entra, el panel scrollea */
+  box-sizing: border-box;            /* el padding no desborda la pantalla */
+  overscroll-behavior: contain;      /* el scroll no se propaga a la página de fondo */
+  -webkit-overflow-scrolling: touch; /* scroll con inercia en táctil */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  border: 1px solid #334155;
+  animation: modalEntradaRapida 0.2s ease-out;
+}
+
+.modal-panel-venta-rapida h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #00ff7f;
+}
+
+.modal-panel-venta-rapida p {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.modal-panel-venta-rapida form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.modal-panel-venta-rapida .form-grid-rapido {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* Fila de 3 columnas de igual ancho: Responsable | DNI | Despachador */
+.modal-panel-venta-rapida .form-grid-rapido-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.modal-panel-venta-rapida .form-campo-rapido label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.modal-panel-venta-rapida .botones-rapido {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-panel-venta-rapida .botones-rapido button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modal-panel-venta-rapida .botones-rapido .btn-cancelar-rapido {
+  background-color: #475569;
+  color: white;
+}
+
+.modal-panel-venta-rapida .botones-rapido .btn-guardar-rapido {
+  background-color: #00ff7f;
+  color: #0f172a;
+}
+
+.modal-panel-venta-rapida .botones-rapido .btn-guardar-rapido:disabled {
+  background-color: #475569;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   NUEVO: MODAL DE SALIDA RÁPIDA POR LOTE (ESCANEO MÚLTIPLE)
+   Extiende el diseño del modal de Venta Rápida manteniendo su
+   paleta de colores, bordes redondeados y tipografía.
+   ============================================================ */
+
+/* ============================================================================
+   SCROLL DEL MODAL "REGISTRO DE SALIDAS RÁPIDA" (LOTE)
+   ----------------------------------------------------------------------------
+   El panel queda dividido en 3 zonas:
+     1) .cabecera-modal-lote  -> título + descripción (fija)
+     2) .cuerpo-scroll-lote   -> campos del lote + equipos (SCROLL VERTICAL AQUÍ)
+     3) .botones-rapido       -> Cancelar / Guardar Venta (fijos, siempre visibles)
+   Antes el panel y el <form> tenían overflow:hidden y NINGUNA zona scrolleaba:
+   en pantallas de poca altura los campos inferiores y los botones quedaban
+   cortados y eran inalcanzables. Ahora el alto es relativo a la pantalla y el
+   cuerpo tiene scroll propio (ratón, táctil y rueda).
+   ============================================================================ */
+.modal-panel-venta-rapida.modal-venta-lote {
+  display: flex;
+  flex-direction: column;
+  width: 96%;                  /* modal MÁS ANCHO: el contenido respira */
+  max-width: 750px;            /* equivalente a max-w-3xl de Tailwind */
+  padding: 18px 20px;          /* padding más compacto para ganar alto útil */
+  overflow: hidden;            /* el scroll vive SOLO en .cuerpo-scroll-lote */
+  max-height: 88vh;            /* alto máximo relativo a la pantalla */
+  max-height: 88dvh;           /* móviles: respeta la barra del navegador */
+  box-sizing: border-box;
+}
+
+/* El formulario ocupa el alto restante del panel y no se desborda */
+.modal-panel-venta-rapida.modal-venta-lote form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;              /* crece / encoge dentro del panel flexible */
+  min-height: 0;               /* imprescindible para que su hijo pueda scrollear */
+  overflow: hidden;
+}
+
+/* --- 1. Cabecera fija (título + descripción) --- */
+.modal-panel-venta-rapida.modal-venta-lote .cabecera-modal-lote {
+  flex: 0 0 auto;
+}
+
+.modal-panel-venta-rapida.modal-venta-lote .cabecera-modal-lote h3 {
+  margin-bottom: 2px;
+  font-size: 1.15rem;
+}
+
+.modal-panel-venta-rapida.modal-venta-lote .cabecera-modal-lote p {
+  margin-bottom: 10px;
+}
+
+/* --- 2. Cuerpo con SCROLL VERTICAL propio (ÚNICO scroll del modal) --- */
+.modal-panel-venta-rapida .cuerpo-scroll-lote {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;                 /* sin esto el flex impide que aparezca el scroll */
+  overflow-y: auto;              /* scroll vertical del contenido */
+  overflow-x: hidden;
+  overscroll-behavior: contain;  /* al llegar al final no mueve la página de fondo */
+  -webkit-overflow-scrolling: touch;
+  padding-right: 6px;            /* aire para que la barra no tape los inputs */
+  scrollbar-width: thin;         /* Firefox */
+  scrollbar-color: #475569 #0f172a;
+}
+
+/* Scrollbar discreta estilo Dark Mode (Chrome / Edge / Safari) */
+.modal-panel-venta-rapida .cuerpo-scroll-lote::-webkit-scrollbar,
+.overlay-informe-leonidas::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modal-panel-venta-rapida .cuerpo-scroll-lote::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 999px;
+}
+
+.overlay-informe-leonidas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-panel-venta-rapida .cuerpo-scroll-lote::-webkit-scrollbar-thumb,
+.overlay-informe-leonidas::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 999px;
+}
+
+.modal-panel-venta-rapida .cuerpo-scroll-lote::-webkit-scrollbar-thumb:hover,
+.overlay-informe-leonidas::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Barra discreta para el backdrop (por si el modal fuese más alto que la pantalla) */
+.overlay-informe-leonidas {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 transparent;
+}
+
+/* --- Títulos internos de cada sección --- */
+.modal-panel-venta-rapida .titulo-seccion-rapida {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+/* --- Sección: Datos comunes del lote (campos NO repetibles) --- */
+.modal-panel-venta-rapida .seccion-datos-lote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;                   /* compacto: menos aire vertical */
+  flex: 0 0 auto;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+/* --- Sección: Equipos (escaneo múltiple, repetible) ---
+   flex-grow 1 -> si sobra alto, la sección se estira y se ven más equipos de golpe.
+   flex-shrink 0 -> nunca se "aplasta": el scroll lo hace el cuerpo del modal, de
+   modo que los 3+ equipos se ven completos sin una cajita con scroll interno. */
+.modal-panel-venta-rapida .seccion-equipos-lote {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 0 auto;
+  min-height: 170px;           /* sección más alta: caben 3 o más filas de equipo */
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.modal-panel-venta-rapida .cabecera-seccion-equipos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modal-panel-venta-rapida .contador-equipos-lote {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #00ff7f;
+  background: rgba(0, 255, 127, 0.08);
+  border: 1px solid rgba(0, 255, 127, 0.35);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* --- Lista de equipos: SIN scroll propio (se elimina el doble scroll) ---
+   El único scroll del modal es el del cuerpo (.cuerpo-scroll-lote). Así la lista
+   crece de forma natural: con 3 o más equipos se ven seguidos y el desplazamiento
+   se hace sobre todo el formulario, no dentro de una cajita pequeña. */
+.modal-panel-venta-rapida .scroll-equipos-lote {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;                    /* tarjetas más juntas (antes 10px) */
+  flex: 0 0 auto;              /* su alto = el de su contenido: no se comprime */
+  overflow: visible;           /* sin scroll interno */
+  padding-right: 0;
+}
+
+/* --- Fila (tarjeta) de cada equipo del lote --- */
+.modal-panel-venta-rapida .fila-equipo-lote {
+  padding: 10px;               /* compacto: más equipos visibles sin scroll */
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.modal-panel-venta-rapida .cabecera-equipo-lote {
+  margin-bottom: 6px;          /* antes 10px */
+}
+
+.modal-panel-venta-rapida .badge-equipo-lote {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #0f172a;
+  background: #00ff7f;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.modal-panel-venta-rapida .grid-campos-equipo-lote {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr; /* el serial (con botón QR) necesita más espacio */
+  gap: 10px;
+}
+
+/* --- Botón de escaneo QR / código de barras de cada fila --- */
+.modal-panel-venta-rapida .btn-scan-lote {
+  transition: filter 0.2s ease, transform 0.1s ease;
+}
+
+.modal-panel-venta-rapida .btn-scan-lote:hover {
+  filter: brightness(1.15);
+}
+
+.modal-panel-venta-rapida .btn-scan-lote:active {
+  transform: scale(0.94);
+}
+
+/* --- Pie fijo con los botones de acción --- */
+.modal-panel-venta-rapida .botones-rapido {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* --- Adaptación para pantallas angostas o de poca altura --- */
+@media (max-width: 560px) {
+  .modal-panel-venta-rapida .grid-campos-equipo-lote,
+  .modal-panel-venta-rapida .form-grid-rapido,
+  .modal-panel-venta-rapida .form-grid-rapido-3 {
+    grid-template-columns: 1fr; /* una sola columna: se lee mejor y no aplasta campos */
+  }
+
+  /* En celular aprovechamos casi todo el alto de pantalla para el modal */
+  .modal-panel-venta-rapida.modal-venta-lote {
+    max-height: 92vh;
+    max-height: 92dvh;
+    width: 96%;
+    padding: 14px;
+  }
+}
+
+@media (max-height: 640px) {
+  .modal-panel-venta-rapida .seccion-equipos-lote {
+    min-height: 96px;
+  }
+}
+
+/* Pantallas de poca altura (laptops pequeños / celular apaisado): compactamos el
+   formulario para que necesite menos scroll, sin dejar nada inalcanzable. */
+@media (max-height: 720px) {
+  .modal-panel-venta-rapida {
+    padding: 16px;
+  }
+
+  /* El modal de lote también se compacta (su regla base tiene más especificidad) */
+  .modal-panel-venta-rapida.modal-venta-lote {
+    padding: 14px 16px;
+  }
+
+  .modal-panel-venta-rapida h3 {
+    font-size: 1.05rem;
+  }
+
+  .modal-panel-venta-rapida p {
+    font-size: 0.82rem;
+    margin-bottom: 12px;
+  }
+
+  .modal-panel-venta-rapida .seccion-datos-lote,
+  .modal-panel-venta-rapida .seccion-equipos-lote {
+    padding: 10px;
+    gap: 9px;
+  }
+
+  .modal-panel-venta-rapida .fila-equipo-lote {
+    padding: 9px;
+  }
+
+  .modal-panel-venta-rapida .cabecera-equipo-lote {
+    margin-bottom: 6px;
+  }
+}
+
+/* Pantallas muy bajas: el modal usa casi toda la altura disponible */
+@media (max-height: 520px) {
+  .modal-panel-venta-rapida.modal-venta-lote {
+    max-height: 96vh;
+    max-height: 96dvh;
+  }
+
+  .modal-panel-venta-rapida .seccion-equipos-lote {
+    min-height: 80px;
+  }
+}
+
+/* ============================================================
+   NUEVO: INPUT NUMÉRICO DE CANTIDAD + BOTÓN "PRECIO ESPECÍFICO"
+   (Modal "Registro de SALIDAS Rápida" de DespachosView)
+   ============================================================ */
+
+/* El input numérico de cantidad hereda el estilo de los inputs del modal */
+.modal-panel-venta-rapida .form-campo-rapido input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Fila: input del precio total + botón "Precio específico" al costado --- */
+.modal-panel-venta-rapida .fila-precio-total-lote {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.modal-panel-venta-rapida .fila-precio-total-lote > input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.modal-panel-venta-rapida .fila-precio-total-lote > input:disabled {
+  background: #0f172a;
+  color: #64748b;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.modal-panel-venta-rapida .btn-precio-especifico {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.1s ease, background-color 0.2s ease;
+}
+
+.modal-panel-venta-rapida .btn-precio-especifico:hover {
+  background: rgba(56, 189, 248, 0.18);
+  filter: brightness(1.1);
+}
+
+.modal-panel-venta-rapida .btn-precio-especifico:active {
+  transform: scale(0.96);
+}
+
+/* Estado activo: el botón indica que ya se está usando precio por equipo */
+.modal-panel-venta-rapida .btn-precio-especifico.activo {
+  color: #0f172a;
+  background: #38bdf8;
+  border-color: #38bdf8;
+}
+
+/* Texto del total calculado en vivo (modo precio específico) */
+.modal-panel-venta-rapida .texto-total-calculado {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #00ff7f;
+  background: rgba(0, 255, 127, 0.07);
+  border: 1px dashed rgba(0, 255, 127, 0.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+/* --- Precio individual dentro de la tarjeta de cada equipo ---
+   Sin precio específico se mantienen 2 columnas (serial + modelo);
+   con precio específico el precio ocupa una tercera columna (ancho completo
+   en pantallas angostas, para no apretar el serial ni el modelo). */
+.modal-panel-venta-rapida .campo-precio-equipo-lote input {
+  border-color: rgba(0, 255, 127, 0.5);
+  background: rgba(0, 255, 127, 0.05);
+  color: #00ff7f;
+  font-weight: 700;
+}
+
+@media (min-width: 561px) {
+  .modal-panel-venta-rapida .grid-campos-equipo-lote.con-precio {
+    grid-template-columns: 1.6fr 1fr 0.9fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .modal-panel-venta-rapida .fila-precio-total-lote {
+    flex-wrap: wrap;
+  }
+
+  .modal-panel-venta-rapida .btn-precio-especifico {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   NUEVO: FILAS DESPLEGABLES (ACORDEÓN) DE LOTES
+   Tabla "Historial de Salidas": una fila maestra por venta/lote
+   + un detalle animado con los equipos que la componen.
+   ============================================================ */
+
+/* --- Fila maestra del lote (toda la fila es clickeable) --- */
+.lote-fila-maestra {
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lote-fila-maestra:hover {
+  background-color: rgba(0, 255, 127, 0.06) !important;
+  box-shadow: inset 3px 0 0 0 #00ff7f;
+}
+
+/* --- Flecha verde desplegable --- */
+.btn-flecha-lote {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0;
+  color: #00ff7f;
+  background: rgba(0, 255, 127, 0.1);
+  border: 1px solid rgba(0, 255, 127, 0.45);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.btn-flecha-lote:hover {
+  background: rgba(0, 255, 127, 0.22);
+  box-shadow: 0 0 10px rgba(0, 255, 127, 0.35);
+}
+
+.btn-flecha-lote svg {
+  transition: transform 0.3s ease;
+}
+
+.btn-flecha-lote.abierto svg {
+  transform: rotate(180deg);
+}
+
+/* --- Contenedor animado (acordeón) del detalle del lote --- */
+.contenedor-detalle-lote {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-left: 0;
+  transition: max-height 0.35s ease, opacity 0.3s ease, padding-left 0.3s ease;
+}
+
+.contenedor-detalle-lote.abierto {
+  max-height: 1600px; /* Suficiente para lotes grandes */
+  opacity: 1;
+  padding-left: 34px; /* Diseño indentado respecto a la fila maestra */
+}
+
+/* --- Sub-tabla con los equipos del lote --- */
+.subtabla-detalle-lote {
+  margin: 8px 0 14px 0;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.85);
+  border-left: 3px solid #00ff7f;
+  border-radius: 0 10px 10px 0;
+  box-shadow: inset 0 0 20px rgba(0, 255, 127, 0.04);
+}
+
+.cabecera-detalle-lote {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #00ff7f;
+}
+
+.tabla-detalle-lote {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tabla-detalle-lote th {
+  padding: 6px 10px;
+  text-align: left;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #334155;
+}
+
+.tabla-detalle-lote td {
+  padding: 7px 10px;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  vertical-align: middle;
+}
+
+.tabla-detalle-lote tbody tr:hover {
+  background: rgba(0, 255, 127, 0.04);
+}
+
+.fila-detalle-lote td {
+  background-color: #0b1220;
+}
+
+/* En pantallas angostas el detalle pierde indentación para ganar espacio */
+@media (max-width: 768px) {
+  .contenedor-detalle-lote.abierto {
+    padding-left: 8px;
+  }
+}
