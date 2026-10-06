@@ -17,6 +17,9 @@ const DespachosView = ({ laptops, usuarioLogueado, iniciarEscaneo }) => {
   const [busqueda, setBusqueda] = useState("");
   const [modoEliminar, setModoEliminar] = useState(false);
   const [filtroFecha, setFiltroFecha] = useState("");
+  // --- SELECTOR DE USUARIO: filtra las salidas por quién registró el envío
+  // (campo `responsable_despacho`). "TODOS" muestra el historial completo.
+  const [filtroUsuario, setFiltroUsuario] = useState("TODOS");
   const [equipoDetalle, setEquipoDetalle] = useState(null);
   const [mostrarGuia, setMostrarGuia] = useState(false);
   // --- NUEVOS ESTADOS: COMPROBANTE COMERCIAL (BOLETA / NOTA DE VENTA) ---
@@ -77,6 +80,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
   const limpiarFiltros = () => {
     setBusqueda("");
     setFiltroFecha("");
+    setFiltroUsuario("TODOS"); // Volvemos a mostrar todas las salidas
   };
 
   // Revierte un equipo a STOCK (sin diálogos: la confirmación la maneja cada botón)
@@ -142,6 +146,81 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     );
   }, [laptops]);
 
+  // --- USUARIOS DISPONIBLES EN EL SELECTOR ---
+  // Se generan desde los propios datos, así cualquier usuario nuevo aparece solo.
+  const usuariosSalida = useMemo(() => {
+    const conjunto = new Set();
+    todosLosDespachos.forEach(lap => {
+      const usuario = String(lap.responsable_despacho || '').trim().toUpperCase();
+      if (usuario) conjunto.add(usuario);
+    });
+    return Array.from(conjunto).sort((a, b) => a.localeCompare(b));
+  }, [todosLosDespachos]);
+
+  // --- SALIDAS FILTRADAS (fecha + usuario + búsqueda) ---
+  // Se declara AQUÍ (antes de `descargarExcelSalidas`) para que la exportación del
+  // Excel pueda usarlo sin referenciarlo antes de su declaración.
+  const despachosHechos = useMemo(() => {
+    // Función para parsear fechas en formato DD/MM/YYYY
+    const obtenerFechaParaOrdenar = (item) => {
+      const fechaStr = item.fecha_despacho || item.fecha_venta || "";
+      if (!fechaStr || typeof fechaStr !== 'string') return new Date(0); // Fecha inválida va al final
+
+      const partes = fechaStr.split('/');
+      if (partes.length !== 3) return new Date(0);
+
+      const dia = parseInt(partes[0], 10);
+      const mes = parseInt(partes[1], 10) - 1; // Mes es 0-indexado en JS
+      const anio = parseInt(partes[2], 10);
+
+      if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return new Date(0);
+      return new Date(anio, mes, dia);
+    };
+
+    const filtrados = laptops.filter(lap => 
+      lap.estado?.toUpperCase() === 'VENDIDO' && 
+      lap.estado_despacho?.toUpperCase() === 'DESPACHADO'
+    ).filter(lap => {
+      // --- FILTRO POR USUARIO (quien registró la salida / responsable de envío) ---
+      // Coincidencia EXACTA (mayúsculas + sin espacios): antes se usaba `includes`
+      // y nombres como "BRAYAN" contenían "RAY", dejando pasar salidas ajenas.
+      if (filtroUsuario !== 'TODOS') {
+        const usuarioSalida = String(lap.responsable_despacho || '').trim().toUpperCase();
+        if (usuarioSalida !== filtroUsuario) return false;
+      }
+
+      // Filtro por fecha
+      if (filtroFecha) {
+        const [year, month, day] = filtroFecha.split('-');
+        const f1 = `${parseInt(day, 10)}/${parseInt(month, 10)}/${year}`;
+        const pad = (num) => String(num).padStart(2, '0');
+        const f2 = `${pad(day)}/${pad(month)}/${year}`;
+        
+        const fechaParaFiltrar = lap.fecha_despacho || lap.fecha_venta;
+
+        if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
+          return false;
+        }
+      }
+
+      if (!busqueda) return true;
+      const texto = busqueda.toLowerCase();
+      return (
+        lap.cliente?.toLowerCase().includes(texto) ||
+        lap.destino?.toLowerCase().includes(texto) ||
+        lap.serial?.toLowerCase().includes(texto) ||
+        lap.marca?.toLowerCase().includes(texto)
+      );
+    });
+
+    // Ordenar los resultados filtrados por fecha, de más reciente a más antiguo
+    return filtrados.sort((a, b) => {
+      const fechaA = obtenerFechaParaOrdenar(a);
+      const fechaB = obtenerFechaParaOrdenar(b);
+      return fechaB.getTime() - fechaA.getTime();
+    });
+  }, [laptops, busqueda, filtroFecha, filtroUsuario]);
+
   const descargarExcelSalidas = async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Historial de Salidas");
@@ -174,6 +253,34 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       { header: 'Despachador', key: 'despachador', width: 20 },
     ];
 
+    // 📅 FILA 1: TÍTULO DEL REPORTE + FECHA DE IMPRESIÓN, para dejar constancia
+    // del día en que se imprimió/exportó este archivo y del filtro activo.
+    // (Si hay un usuario filtrado en la tabla, se indica en el propio título.)
+    const tituloReporte = filtroUsuario && filtroUsuario !== 'TODOS'
+      ? `EXCEL DE SALIDAS - USUARIO: ${filtroUsuario}`
+      : 'EXCEL DE SALIDAS';
+    const momentoImpresion = new Date();
+    const textoFechaImpresion = `${tituloReporte} | FECHA DE IMPRESIÓN: ${momentoImpresion.toLocaleDateString()} ${momentoImpresion.toLocaleTimeString()}`;
+    const totalColumnas = worksheet.columns.length;
+    worksheet.insertRows(1, [[textoFechaImpresion]]); // el encabezado pasa a la fila 2
+
+    // Estilo de la fila de fecha (fondo verde con letra blanca, igual que en la Tabla General)
+    const filaFecha = worksheet.getRow(1);
+    filaFecha.height = 22;
+    for (let c = 1; c <= totalColumnas; c++) {
+      const celda = filaFecha.getCell(c);
+      celda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF166534' } }; // Verde
+      celda.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 14 };
+      celda.alignment = { vertical: 'middle', horizontal: 'center' };
+      celda.border = {
+        top: { style: 'thin', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FF000000' } },
+        bottom: { style: 'thin', color: { argb: 'FF000000' } },
+        right: { style: 'thin', color: { argb: 'FF000000' } }
+      };
+    }
+    worksheet.mergeCells(1, 1, 1, totalColumnas); // La fecha ocupa todo el ancho de la tabla
+
     // Configuración de página horizontal y ajuste a 1 página de ancho
     worksheet.pageSetup = {
       orientation: 'landscape',
@@ -183,8 +290,9 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     };
 
     // Estilo del encabezado (Blanco y Negro) — alto de fila 20 para que no se vea comprimido
-    worksheet.getRow(1).height = 20;
-    worksheet.getRow(1).eachCell((cell) => {
+    // OJO: ahora el encabezado está en la FILA 2 (la 1 es la fecha de impresión)
+    worksheet.getRow(2).height = 20;
+    worksheet.getRow(2).eachCell((cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; // Fondo Negro
       cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }; // Letra Blanca
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -196,8 +304,10 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       };
     });
 
-    // Ordenar los despachos por fecha, de más reciente a más antiguo
-    const despachosOrdenados = [...todosLosDespachos].sort((a, b) => {
+    // Ordenar los despachos por fecha, de más reciente a más antiguo.
+    // NOTA: se exportan las salidas FILTRADAS (igual que se ven en pantalla),
+    // así el selector de usuario, el de fecha y la búsqueda también afectan al Excel.
+    const despachosOrdenados = [...despachosHechos].sort((a, b) => {
       const fechaA = obtenerFechaParaOrdenar(a);
       const fechaB = obtenerFechaParaOrdenar(b);
       return fechaB.getTime() - fechaA.getTime();
@@ -666,58 +776,8 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     }
   };
 
-  const despachosHechos = useMemo(() => {
-    // Función para parsear fechas en formato DD/MM/YYYY
-    const obtenerFechaParaOrdenar = (item) => {
-      const fechaStr = item.fecha_despacho || item.fecha_venta || "";
-      if (!fechaStr || typeof fechaStr !== 'string') return new Date(0); // Fecha inválida va al final
-
-      const partes = fechaStr.split('/');
-      if (partes.length !== 3) return new Date(0);
-
-      const dia = parseInt(partes[0], 10);
-      const mes = parseInt(partes[1], 10) - 1; // Mes es 0-indexado en JS
-      const anio = parseInt(partes[2], 10);
-
-      if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return new Date(0);
-      return new Date(anio, mes, dia);
-    };
-
-    const filtrados = laptops.filter(lap => 
-      lap.estado?.toUpperCase() === 'VENDIDO' && 
-      lap.estado_despacho?.toUpperCase() === 'DESPACHADO'
-    ).filter(lap => {
-      // Filtro por fecha
-      if (filtroFecha) {
-        const [year, month, day] = filtroFecha.split('-');
-        const f1 = `${parseInt(day, 10)}/${parseInt(month, 10)}/${year}`;
-        const pad = (num) => String(num).padStart(2, '0');
-        const f2 = `${pad(day)}/${pad(month)}/${year}`;
-        
-        const fechaParaFiltrar = lap.fecha_despacho || lap.fecha_venta;
-
-        if (fechaParaFiltrar !== f1 && fechaParaFiltrar !== f2) {
-          return false;
-        }
-      }
-
-      if (!busqueda) return true;
-      const texto = busqueda.toLowerCase();
-      return (
-        lap.cliente?.toLowerCase().includes(texto) ||
-        lap.destino?.toLowerCase().includes(texto) ||
-        lap.serial?.toLowerCase().includes(texto) ||
-        lap.marca?.toLowerCase().includes(texto)
-      );
-    });
-
-    // Ordenar los resultados filtrados por fecha, de más reciente a más antiguo
-    return filtrados.sort((a, b) => {
-      const fechaA = obtenerFechaParaOrdenar(a);
-      const fechaB = obtenerFechaParaOrdenar(b);
-      return fechaB.getTime() - fechaA.getTime();
-    });
-  }, [laptops, busqueda, filtroFecha]);
+  // NOTA: `despachosHechos` ahora se declara arriba (junto a `usuariosSalida`),
+  // para que `descargarExcelSalidas` pueda exportar exactamente lo que se ve en pantalla.
 
   // --- AGRUPACIÓN POR LOTES (ACORDEÓN) ---
   // Cada venta por lote se convierte en UNA sola fila maestra. La agrupación usa el número
@@ -921,6 +981,30 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
             onChange={(e) => setFiltroFecha(e.target.value)}
             className="input-calendar-ventas"
           />
+          {/* --- SELECTOR DE USUARIO: filtra las salidas por quién las registró --- */}
+          <select
+            value={filtroUsuario}
+            onChange={(e) => setFiltroUsuario(e.target.value)}
+            title="Filtrar salidas por usuario (responsable de envío)"
+            className="input-calendar-ventas"
+            style={{
+              minWidth: '170px',
+              cursor: 'pointer',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              paddingRight: '32px',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              backgroundSize: '15px'
+            }}
+          >
+            <option value="TODOS">👤 TODOS LOS USUARIOS</option>
+            {usuariosSalida.map(usuario => (
+              <option key={usuario} value={usuario}>{usuario}</option>
+            ))}
+          </select>
           <div className="search-box-ventas">
             {busqueda === "" && <Search size={18} className="search-icon" />}
             <input

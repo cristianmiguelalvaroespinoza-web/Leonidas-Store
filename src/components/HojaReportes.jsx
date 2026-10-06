@@ -679,15 +679,53 @@ const toggleModelo = (clave) => {
         row['UTILIDAD'] = esVendido ? (item.utilidad || (Number(item.precio) - Number(item.precio_costo)) || 0) : 0;
       }
       row['ESTADO'] = item.estado || "STOCK";
-      row['CLIENTE'] = item.cliente || "N/A";
-      row['TELEFONO'] = item.telefono || item.celular || "N/A";
-      // 💬 Comentario / Observación de la fila (marcador triangular en la tabla)
-      row['COMENTARIO'] = textoComentario(item);
+      // NOTA: CLIENTE, TELEFONO y COMENTARIO ya no se exportan al Excel
+      // (solo existen en la tabla visual).
 
       return row;
     });
 
     const ws = XLSX.utils.json_to_sheet(datosFormateados);
+
+    // 📅 FILA 0: TÍTULO DEL REPORTE + FECHA DE IMPRESIÓN.
+    // El título refleja el filtro activo en la TABLA GENERAL
+    // (TODOS / STOCK / VENDIDOS / PENDIENTES) y, si aplica, el usuario filtrado.
+    // Para abrirla, todas las filas existentes (encabezado + datos) se corren una posición hacia abajo.
+    const etiquetasEstado = {
+      TODOS: 'EXCEL DE TODOS',
+      STOCK: 'EXCEL DE STOCK',
+      VENDIDO: 'EXCEL DE VENDIDOS',
+      PENDIENTE: 'EXCEL DE PENDIENTES'
+    };
+    const tituloReporte = etiquetasEstado[filtroEstado] || `EXCEL DE ${filtroEstado}`;
+    const tituloUsuario = (filtroVendedor && filtroVendedor !== 'TODOS')
+      ? ` - USUARIO: ${filtroVendedor}`
+      : '';
+    const momentoImpresion = new Date();
+    const textoFechaImpresion = `${tituloReporte}${tituloUsuario} | FECHA DE IMPRESIÓN: ${momentoImpresion.toLocaleDateString()} ${momentoImpresion.toLocaleTimeString()}`;
+    const rangoDatos = ws['!ref']
+      ? XLSX.utils.decode_range(ws['!ref'])
+      : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
+
+    // Recorremos de abajo hacia arriba para no pisar celdas al desplazarlas
+    for (let F = rangoDatos.e.r; F >= rangoDatos.s.r; F--) {
+      for (let C = rangoDatos.e.c; C >= rangoDatos.s.c; C--) {
+        const origen = XLSX.utils.encode_cell({ r: F, c: C });
+        const celdaOrigen = ws[origen];
+        if (!celdaOrigen) continue;
+        delete ws[origen];
+        ws[XLSX.utils.encode_cell({ r: F + 1, c: C })] = celdaOrigen;
+      }
+    }
+
+    // Colocamos la fecha en la nueva fila 0 y ampliamos el rango de la hoja
+    ws[XLSX.utils.encode_cell({ r: 0, c: 0 })] = { t: 's', v: textoFechaImpresion };
+    ws['!ref'] = XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: rangoDatos.e.r + 1, c: rangoDatos.e.c }
+    });
+    // La fecha ocupa todo el ancho de la tabla (celdas combinadas)
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: rangoDatos.e.c } }];
 
     // --- INICIO: MAGIA DE COLORES PARA FINPRO STORE ---
     
@@ -712,6 +750,17 @@ const toggleModelo = (clave) => {
       }
     };
 
+    // Fila 0 = FECHA DE IMPRESIÓN | Fila 1 = Encabezados | Filas siguientes = Datos
+    const estiloTituloFecha = {
+      font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, // Letra Blanca grande
+      fill: { fgColor: { rgb: "166534" } },          // Fondo Verde (tono del botón de Excel)
+      alignment: { horizontal: "center", vertical: "center" },
+      border: { 
+        top: {style: "thin", color: {rgb: "000000"}}, bottom: {style: "thin", color: {rgb: "000000"}}, 
+        left: {style: "thin", color: {rgb: "000000"}}, right: {style: "thin", color: {rgb: "000000"}} 
+      }
+    };
+
     // 2. Recorremos celda por celda como un pintor
     const rango = XLSX.utils.decode_range(ws['!ref']);
     for (let F = rango.s.r; F <= rango.e.r; F++) {
@@ -719,8 +768,8 @@ const toggleModelo = (clave) => {
         const celda = ws[XLSX.utils.encode_cell({ r: F, c: C })];
         if (!celda) continue;
         
-        // Si es la Fila 0 (los títulos), le damos estilo de Encabezado, sino estilo de Cuerpo
-        celda.s = F === 0 ? estiloEncabezado : estiloCuerpo;
+        // Fila 0 = Fecha de impresión | Fila 1 (los títulos) = Encabezado | resto = Cuerpo
+        celda.s = F === 0 ? estiloTituloFecha : (F === 1 ? estiloEncabezado : estiloCuerpo);
       }
     }
 
@@ -749,18 +798,19 @@ const toggleModelo = (clave) => {
     };
 
     // Ubicamos la columna MARCA por su encabezado (más robusto que asumir una posición fija)
+    // OJO: la fila 0 es la FECHA DE IMPRESIÓN, por eso los encabezados están en la fila 1.
     let columnaMarca = -1;
     for (let C = rango.s.c; C <= rango.e.c; C++) {
-      const celdaHeader = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+      const celdaHeader = ws[XLSX.utils.encode_cell({ r: 1, c: C })];
       if (celdaHeader && String(celdaHeader.v || '').trim().toUpperCase() === 'MARCA') {
         columnaMarca = C;
         break;
       }
     }
 
-    // Pintamos cada celda de la columna MARCA (saltándonos la fila de encabezado)
+    // Pintamos cada celda de la columna MARCA (saltándonos la fila de fecha y la de encabezado)
     if (columnaMarca !== -1) {
-      for (let F = rango.s.r + 1; F <= rango.e.r; F++) {
+      for (let F = rango.s.r + 2; F <= rango.e.r; F++) {
         const celdaMarca = ws[XLSX.utils.encode_cell({ r: F, c: columnaMarca })];
         if (!celdaMarca) continue;
         const estiloPastel = obtenerEstiloPastelMarca(celdaMarca.v);
@@ -783,10 +833,7 @@ const toggleModelo = (clave) => {
       { wch: 10 }, // K: COSTO
       { wch: 10 }, // L: PRECIO
       { wch: 10 }, // M: UTILIDAD
-      { wch: 13 }, // N: ESTADO
-      { wch: 13 }, // O: CLIENTE
-      { wch: 13 }, // P: TELÉFONO
-      { wch: 40 }  // Q: COMENTARIO
+      { wch: 13 }  // N: ESTADO (FIN: antes seguían CLIENTE, TELÉFONO y COMENTARIO)
     ];
 
     // Configuración de altura de fila fija (31.00) para todas las filas
