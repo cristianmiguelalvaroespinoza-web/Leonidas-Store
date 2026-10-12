@@ -71,6 +71,27 @@ const corregirGeneracion = (texto) => {
 // Normaliza un serial para comparar (mayúsculas, sin espacios) - auditoría
 const normalizarSerialAudit = (serial) => String(serial || '').trim().toUpperCase().replace(/\s+/g, '');
 
+// --- ALIAS CANÓNICO PARA EL FILTRO POR VENDEDOR (coherente con nombreVendedorVisible) ---
+// El selector muestra "🏢 GENERAL" con value="JEFE", pero en la BD el responsable
+// puede estar guardado como LEONIDAS, JEFE, SUPER ADMIN, PIA, etc.
+// Sin este mapeo, `nombreVendedor.includes("JEFE")` dejaba fuera a LEONIDAS/PIA.
+const aliasVendedorParaFiltro = (nombre) => {
+  // El responsable a veces viene como objeto { nombre: ... } → extraemos el texto
+  const bruto = (nombre && typeof nombre === 'object') ? (nombre.nombre ?? nombre.user ?? '') : nombre;
+  const limpio = String(bruto || '').toUpperCase().trim();
+  if (!limpio) return '';
+  if (limpio === 'RAY' || limpio.includes('TIENDA PRINCIPAL')) return 'RAY';
+  if (
+    limpio === 'LEONIDAS' ||
+    limpio === 'JEFE' ||
+    limpio === 'GENERAL' ||
+    limpio === 'SUPER ADMIN' ||
+    limpio === 'SUPER_ADMIN' ||
+    limpio.includes('PIA')
+  ) return 'JEFE';
+  return limpio;
+};
+
 const HojaReportes = ({ laptops, usuarioLogueado, activarEdicion, setModalImagen, fechaFiltro, setFechaFiltro, tienePermiso, iniciarEscaneo }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
@@ -301,36 +322,106 @@ const toggleModelo = (clave) => {
       const buffer = await archivo.arrayBuffer();
       const libro = XLSX.read(buffer, { type: 'array' });
       const hoja = libro.Sheets[libro.SheetNames[0]];
-      const filas = XLSX.utils.sheet_to_json(hoja, { defval: '' });
 
-      const claves = filas.length ? Object.keys(filas[0]) : [];
-      const claveSerial = claves.find(k => {
-        const n = String(k).toUpperCase().trim();
-        return n === 'SERIAL' || n.includes('SERIAL') || n === 'S/N' || n === 'N/S'
-          || n.includes('N° SERIE') || n.includes('NUMERO DE SERIE') || n.includes('NÚMERO DE SERIE');
-      });
+      /* ============================================================================
+         CORRECCIÓN: el Excel exportado por el sistema incluye un TÍTULO en la
+         primera fila (ej. "EXCEL DE STOCK | FECHA DE IMPRESIÓN: ..."), por lo que
+         los encabezados reales (SERIAL, MARCA, MODELO, ESTADO) NO están en la fila 0.
+         ============================================================================ */
 
-      if (!claveSerial) {
+      // 1) LECTURA SIN ASUMIR ENCABEZADO EN LA FILA 0
+      //    header: 1 devuelve cada fila como un arreglo de celdas (sin claves),
+      //    así podemos inspeccionar las primeras filas antes de decidir cuál manda.
+      const filasCrudas = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '', blankrows: false });
+
+      // 2) BÚSQUEDA DINÁMICA DE LA FILA DE ENCABEZADOS (primeras 10 filas)
+      //    Se puntúa cada fila según cuántas palabras clave contiene y se elige
+      //    la de mayor puntaje (una fila con SERIAL+MARCA+MODELO+ESTADO puntúa 4).
+      const PALABRAS_CLAVE = ['SERIAL', 'S/N', 'N/S', 'N° SERIE', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE', 'MARCA', 'MODELO', 'ESTADO'];
+      const normalizarEncabezado = (valor) => String(valor ?? '').trim().toUpperCase();
+
+      const puntuarFilaEncabezado = (fila) => {
+        if (!Array.isArray(fila)) return 0;
+        return fila.reduce((puntos, celda) => {
+          const nombre = normalizarEncabezado(celda);
+          if (!nombre) return puntos;
+          return PALABRAS_CLAVE.some(palabra => nombre === palabra || nombre.includes(palabra))
+            ? puntos + 1
+            : puntos;
+        }, 0);
+      };
+
+      let filaEncabezado = -1;
+      let mejorPuntaje = 0;
+      const limiteBusqueda = Math.min(filasCrudas.length, 10);
+      for (let i = 0; i < limiteBusqueda; i++) {
+        const puntaje = puntuarFilaEncabezado(filasCrudas[i]);
+        if (puntaje > mejorPuntaje) {
+          mejorPuntaje = puntaje;
+          filaEncabezado = i;
+        }
+      }
+
+      if (filaEncabezado === -1) {
         setResultadosAuditoria({ coincidentes: [], faltantesSistema: [], faltantesExcel: [] });
-        setNotificacionMasiva({ tipo: 'error', texto: `⚠️ No se encontró una columna SERIAL en "${archivo.name}". Columnas: ${claves.slice(0, 8).join(', ')}` });
+        setNotificacionMasiva({ tipo: 'error', texto: `⚠️ No se detectó una fila de encabezados (SERIAL, MARCA, MODELO, ESTADO) en las primeras 10 filas de "${archivo.name}".` });
         return;
       }
 
-      const filasExcel = filas
-        .map((f, i) => ({
-          _fila: i,
-          serial: normalizarSerialAudit(f[claveSerial]),
-          modelo: String(f.MODELO || f.Modelo || '').trim().toUpperCase(),
-          marca: String(f.MARCA || f.Marca || '').trim().toUpperCase(),
-          original: f
-        }))
+      // 3) NORMALIZACIÓN Y LIMPIEZA DE NOMBRES DE COLUMNAS (mayúsculas, sin espacios)
+      const encabezados = (Array.isArray(filasCrudas[filaEncabezado]) ? filasCrudas[filaEncabezado] : [])
+        .map(normalizarEncabezado);
+
+      // Sinónimos / variaciones aceptadas para la columna del número de serie
+      const SINONIMOS_SERIAL = ['SERIAL', 'S/N', 'N/S', 'N° SERIE', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE'];
+      const indiceSerial = encabezados.findIndex(nombre =>
+        SINONIMOS_SERIAL.some(sinonimo => nombre === sinonimo)
+        || nombre.includes('SERIAL')
+        || nombre.includes('SERIE')
+      );
+
+      if (indiceSerial === -1) {
+        setResultadosAuditoria({ coincidentes: [], faltantesSistema: [], faltantesExcel: [] });
+        setNotificacionMasiva({ tipo: 'error', texto: `⚠️ No se encontró una columna SERIAL en "${archivo.name}". Columnas: ${encabezados.filter(Boolean).slice(0, 8).join(', ')}` });
+        return;
+      }
+
+      // Columnas auxiliares MARCA y MODELO (también normalizadas)
+      const indiceMarca = encabezados.findIndex(n => n.includes('MARCA'));
+      const indiceModelo = encabezados.findIndex(n => n.includes('MODELO'));
+
+      // 4) PROCESAMIENTO DE DATOS: extraer las filas POR DEBAJO del encabezado detectado
+      const filasExcel = filasCrudas
+        .slice(filaEncabezado + 1)
+        .map((fila, i) => {
+          const obtenerCelda = (indice) => (indice >= 0 && Array.isArray(fila)) ? String(fila[indice] ?? '').trim() : '';
+          return {
+            _fila: filaEncabezado + 1 + i,
+            serial: normalizarSerialAudit(obtenerCelda(indiceSerial)),
+            modelo: obtenerCelda(indiceModelo).toUpperCase(),
+            marca: obtenerCelda(indiceMarca).toUpperCase(),
+            original: fila
+          };
+        })
         .filter(f => f.serial);
 
-      // Índice del inventario filtrado por serial normalizado
+      // Índice del inventario FILTRADO por serial normalizado (estado/marca/modelo elegidos)
       const indiceBd = new Map();
       inventarioFiltradoAuditoria.forEach(l => {
         const s = normalizarSerialAudit(l.serial);
         if (s && !indiceBd.has(s)) indiceBd.set(s, l);
+      });
+
+      // Índice del inventario COMPLETO (sin filtros de estado/marca/modelo).
+      // Sirve para distinguir un equipo que REALMENTE no está en el sistema de uno
+      // que sí existe pero en OTRO estado. Ej.: al auditar "VENDIDOS", un serial que
+      // en el Excel está en STOCK existe en la BD pero queda FUERA del filtro actual:
+      // NO debe reportarse como "Falta en Sistema", simplemente no corresponde a esta
+      // auditoría y se ignora. Solo se marca como faltante lo que no existe en NINGÚN estado.
+      const indiceBdCompleto = new Map();
+      (laptops || []).forEach(l => {
+        const s = normalizarSerialAudit(l.serial);
+        if (s && !indiceBdCompleto.has(s)) indiceBdCompleto.set(s, l);
       });
 
       const indiceExcel = new Map();
@@ -348,6 +439,10 @@ const toggleModelo = (clave) => {
             bd: enBd,
             coincideModelo: normalizarSerialAudit(f.modelo) === normalizarSerialAudit(enBd.modelo)
           });
+        } else if (indiceBdCompleto.has(f.serial)) {
+          // Existe en el sistema pero con otro estado/marca/modelo → fuera de esta auditoría.
+          // Se ignora (no es coincidencia ni faltante) para que, por ejemplo, al corroborar
+          // VENDIDOS no aparezcan los equipos de STOCK marcados como "Falta en Sistema".
         } else {
           faltantesSistema.push({ serial: f.serial, excel: f });
         }
@@ -408,6 +503,184 @@ const toggleModelo = (clave) => {
       setNotificacionMasiva({ tipo: 'error', texto: '❌ Error al registrar: ' + error.message });
     } finally {
       setRegistrandoFaltantes(false);
+    }
+  };
+
+  /* ===================== AUDITORÍA: EXCEL CORROBORADO ===================== */
+
+  /**
+   * Descarga un Excel ÚNICO de la auditoría recién procesada. Cada equipo que
+   * COINCIDE entre el archivo físico y el sistema lleva una marca de verificación
+   * (✓) en la columna VERIFICADO. Los faltantes se listan con ✗ para dejar
+   * constancia completa de la conciliación. El nombre del archivo incluye fecha
+   * y hora para que cada corroboración genere un documento distinto.
+   */
+  const descargarExcelAuditoria = () => {
+    try {
+      const { coincidentes, faltantesSistema, faltantesExcel } = resultadosAuditoria;
+
+      if (coincidentes.length === 0 && faltantesSistema.length === 0 && faltantesExcel.length === 0) {
+        setNotificacionMasiva({ tipo: 'error', texto: '⚠️ No hay resultados de auditoría para exportar.' });
+        return;
+      }
+
+      // Lista única: coincidentes (✓) primero, luego los faltantes (✗).
+      const filas = [];
+      let contador = 0;
+
+      coincidentes.forEach(r => {
+        contador++;
+        filas.push({
+          'N°': contador,
+          'N° DE SERIE': r.serial,
+          'MARCA': r.bd?.marca || r.excel?.marca || '—',
+          'MODELO (SISTEMA)': r.bd?.modelo || '—',
+          'MODELO (FÍSICO)': r.excel?.modelo || '—',
+          'VERIFICADO': '✓',
+          'RESULTADO': r.coincideModelo ? 'OK' : 'Revisar modelo'
+        });
+      });
+
+      faltantesSistema.forEach(r => {
+        contador++;
+        filas.push({
+          'N°': contador,
+          'N° DE SERIE': r.serial,
+          'MARCA': r.excel?.marca || '—',
+          'MODELO (SISTEMA)': '—',
+          'MODELO (FÍSICO)': r.excel?.modelo || '—',
+          'VERIFICADO': '✗',
+          'RESULTADO': 'FALTA EN SISTEMA'
+        });
+      });
+
+      faltantesExcel.forEach(r => {
+        contador++;
+        filas.push({
+          'N°': contador,
+          'N° DE SERIE': r.serial,
+          'MARCA': r.bd?.marca || '—',
+          'MODELO (SISTEMA)': r.bd?.modelo || '—',
+          'MODELO (FÍSICO)': '—',
+          'VERIFICADO': '✗',
+          'RESULTADO': 'FALTA EN FÍSICO/EXCEL'
+        });
+      });
+
+      const ws = XLSX.utils.json_to_sheet(filas);
+
+      // 📅 FILA 0: TÍTULO DEL REPORTE + FECHA DE IMPRESIÓN (se corre todo una fila hacia abajo).
+      const momento = new Date();
+      const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+      const nombreDia = DIAS_SEMANA[momento.getDay()];
+      const textoTitulo = `AUDITORÍA CORROBORADA | ARCHIVO: ${nombreArchivo} | COINCIDENTES: ${coincidentes.length} | FECHA DE IMPRESIÓN: ${nombreDia} ${momento.toLocaleDateString()} ${momento.toLocaleTimeString()}`;
+      const rangoDatos = ws['!ref']
+        ? XLSX.utils.decode_range(ws['!ref'])
+        : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
+
+      for (let F = rangoDatos.e.r; F >= rangoDatos.s.r; F--) {
+        for (let C = rangoDatos.e.c; C >= rangoDatos.s.c; C--) {
+          const origen = XLSX.utils.encode_cell({ r: F, c: C });
+          const celdaOrigen = ws[origen];
+          if (!celdaOrigen) continue;
+          delete ws[origen];
+          ws[XLSX.utils.encode_cell({ r: F + 1, c: C })] = celdaOrigen;
+        }
+      }
+
+      ws[XLSX.utils.encode_cell({ r: 0, c: 0 })] = { t: 's', v: textoTitulo };
+      ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rangoDatos.e.r + 1, c: rangoDatos.e.c } });
+      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: rangoDatos.e.c } }];
+
+      // --- ESTILOS (misma paleta que el reporte de inventario) ---
+      const bordeFino = {
+        top: { style: "thin", color: { rgb: "000000" } }, bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } }, right: { style: "thin", color: { rgb: "000000" } }
+      };
+      const estiloTitulo = {
+        font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "166534" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: bordeFino
+      };
+      const estiloEncabezado = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "000000" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: bordeFino
+      };
+      const estiloCuerpo = {
+        font: { color: { rgb: "000000" } },
+        fill: { fgColor: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: bordeFino
+      };
+
+      const rango = XLSX.utils.decode_range(ws['!ref']);
+
+      // Ubicamos la columna VERIFICADO por su encabezado (fila 1).
+      let colVerificado = -1;
+      for (let C = rango.s.c; C <= rango.e.c; C++) {
+        const celdaHeader = ws[XLSX.utils.encode_cell({ r: 1, c: C })];
+        if (celdaHeader && String(celdaHeader.v || '').trim().toUpperCase() === 'VERIFICADO') {
+          colVerificado = C;
+          break;
+        }
+      }
+
+      // Pintado general: fila 0 = título | fila 1 = encabezado | resto = cuerpo.
+      for (let F = rango.s.r; F <= rango.e.r; F++) {
+        for (let C = rango.s.c; C <= rango.e.c; C++) {
+          const celda = ws[XLSX.utils.encode_cell({ r: F, c: C })];
+          if (!celda) continue;
+          celda.s = F === 0 ? estiloTitulo : (F === 1 ? estiloEncabezado : estiloCuerpo);
+        }
+      }
+
+      // Columna VERIFICADO: verde para ✓ (coincide), rojo para ✗ (faltante).
+      if (colVerificado !== -1) {
+        for (let F = rango.s.r + 2; F <= rango.e.r; F++) {
+          const celda = ws[XLSX.utils.encode_cell({ r: F, c: colVerificado })];
+          if (!celda) continue;
+          const esOk = String(celda.v || '').trim() === '✓';
+          celda.s = {
+            font: { bold: true, color: { rgb: esOk ? "14532D" : "7F1D1D" } },
+            fill: { fgColor: { rgb: esOk ? "BBF7D0" : "FECACA" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: bordeFino
+          };
+        }
+      }
+
+      // Anchos de columna
+      ws['!cols'] = [
+        { wch: 6 },  // A: N°
+        { wch: 20 }, // B: N° DE SERIE
+        { wch: 14 }, // C: MARCA
+        { wch: 26 }, // D: MODELO (SISTEMA)
+        { wch: 26 }, // E: MODELO (FÍSICO)
+        { wch: 12 }, // F: VERIFICADO
+        { wch: 22 }  // G: RESULTADO
+      ];
+
+      // Altura de fila fija
+      ws['!rows'] = [];
+      for (let F = rango.s.r; F <= rango.e.r; F++) {
+        ws['!rows'].push({ hpt: 24 });
+      }
+
+      ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 };
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Auditoría Corroborada");
+
+      // Nombre ÚNICO por corroboración (fecha + hora) para no sobrescribir auditorías previas.
+      const pad = (n) => String(n).padStart(2, '0');
+      const nombreUnico = `Auditoria_Corroborada_${momento.getFullYear()}${pad(momento.getMonth() + 1)}${pad(momento.getDate())}_${pad(momento.getHours())}${pad(momento.getMinutes())}${pad(momento.getSeconds())}.xlsx`;
+      XLSX.writeFile(wb, nombreUnico);
+    } catch (error) {
+      console.error('Error al exportar el Excel de auditoría:', error);
+      setNotificacionMasiva({ tipo: 'error', texto: '❌ Error al generar el Excel: ' + error.message });
     }
   };
 
@@ -548,9 +821,8 @@ const toggleModelo = (clave) => {
   const datosFiltrados = (laptops || []).filter(d => {
     if (!d) return false;
 
-    // 1. Filtro por Vendedor
-    const nombreVendedor = String(d.responsable || d.vendedor || "").toUpperCase();
-    const pasaVendedor = filtroVendedor === "TODOS" || nombreVendedor.includes(filtroVendedor);
+    // 1. Filtro por Vendedor (usa el mismo mapeo que la etiqueta visual "GENERAL"/"TIENDA PRINCIPAL")
+    const pasaVendedor = filtroVendedor === "TODOS" || aliasVendedorParaFiltro(d.responsable ?? d.vendedor).includes(filtroVendedor);
     if (!pasaVendedor) return false;
 
     // 2. Filtro por Tiempo (CORREGIDO)
@@ -616,10 +888,13 @@ const toggleModelo = (clave) => {
     const estadoActual = (d.estado || "STOCK").toUpperCase().trim();
     if (filtroEstado !== 'TODOS' && estadoActual !== filtroEstado) return false;
 
-    // 5. Filtro por Texto
+    // 5. Filtro por Texto (incluye el responsable real y sus alias visuales GENERAL / TIENDA PRINCIPAL)
     const texto = busqueda.toLowerCase().trim();
     if (!texto) return true;
-    const caracteristicas = `${d.marca || ''} ${d.modelo || ''} ${d.serial || ''} ${d.procesador || ''} ${d.generacion || d.gen || ''} ${d.ram || ''} ${d.gpu || ''} ${d.almacenamiento || d.disco || ''} ${nombreVendedor} ${d.n_pedido || ''} ${textoComentario(d)}`.toLowerCase();
+    const responsableTexto = (d.responsable && typeof d.responsable === 'object')
+      ? (d.responsable.nombre ?? d.responsable.user ?? '')
+      : (d.responsable ?? d.vendedor ?? '');
+    const caracteristicas = `${d.marca || ''} ${d.modelo || ''} ${d.serial || ''} ${d.procesador || ''} ${d.generacion || d.gen || ''} ${d.ram || ''} ${d.gpu || ''} ${d.almacenamiento || d.disco || ''} ${responsableTexto} ${nombreVendedorVisible(responsableTexto)} ${d.n_pedido || ''} ${textoComentario(d)}`.toLowerCase();
     return caracteristicas.includes(texto);
   });
 
@@ -702,7 +977,10 @@ const toggleModelo = (clave) => {
       ? ` - USUARIO: ${filtroVendedor}`
       : '';
     const momentoImpresion = new Date();
-    const textoFechaImpresion = `${tituloReporte}${tituloUsuario} | FECHA DE IMPRESIÓN: ${momentoImpresion.toLocaleDateString()} ${momentoImpresion.toLocaleTimeString()}`;
+    // Nombre del día en español (LUNES, MARTES, MIÉRCOLES, JUEVES, VIERNES, SÁBADO, DOMINGO)
+    const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const nombreDia = DIAS_SEMANA[momentoImpresion.getDay()];
+    const textoFechaImpresion = `${tituloReporte}${tituloUsuario} | FECHA DE IMPRESIÓN: ${nombreDia} ${momentoImpresion.toLocaleDateString()} ${momentoImpresion.toLocaleTimeString()}`;
     const rangoDatos = ws['!ref']
       ? XLSX.utils.decode_range(ws['!ref'])
       : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
@@ -1657,6 +1935,18 @@ const toggleModelo = (clave) => {
                     onClick={() => setPestanaAuditoria('faltantesExcel')}>
                     <XCircle size={15} /> ❌ Faltan en Físico/Excel ({resultadosAuditoria.faltantesExcel.length})
                   </button>
+                </div>
+              )}
+
+              {/* ---------- DESCARGAR EXCEL CORROBORADO ---------- */}
+              {nombreArchivo && (
+                <div className={styles.auditoriaAcciones}>
+                  <button className={styles.btnPrimario} onClick={descargarExcelAuditoria}>
+                    <FileSpreadsheet size={15} /> 📥 Descargar Excel Corroborado
+                  </button>
+                  <small style={{ color: '#64748b', fontSize: '11px', alignSelf: 'center' }}>
+                    {resultadosAuditoria.coincidentes.length} equipo(s) con ✓ de verificación.
+                  </small>
                 </div>
               )}
               {/* ---------- RESULTADOS ---------- */}

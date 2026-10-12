@@ -260,7 +260,10 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       ? `EXCEL DE SALIDAS - USUARIO: ${filtroUsuario}`
       : 'EXCEL DE SALIDAS';
     const momentoImpresion = new Date();
-    const textoFechaImpresion = `${tituloReporte} | FECHA DE IMPRESIÓN: ${momentoImpresion.toLocaleDateString()} ${momentoImpresion.toLocaleTimeString()}`;
+    // Nombre del día en español (LUNES, MARTES, MIÉRCOLES, JUEVES, VIERNES, SÁBADO, DOMINGO)
+    const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const nombreDia = DIAS_SEMANA[momentoImpresion.getDay()];
+    const textoFechaImpresion = `${tituloReporte} | FECHA DE IMPRESIÓN: ${nombreDia} ${momentoImpresion.toLocaleDateString()} ${momentoImpresion.toLocaleTimeString()}`;
     const totalColumnas = worksheet.columns.length;
     worksheet.insertRows(1, [[textoFechaImpresion]]); // el encabezado pasa a la fila 2
 
@@ -304,13 +307,49 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       };
     });
 
-    // Ordenar los despachos por fecha, de más reciente a más antiguo.
-    // NOTA: se exportan las salidas FILTRADAS (igual que se ven en pantalla),
-    // así el selector de usuario, el de fecha y la búsqueda también afectan al Excel.
+    // --- ORDEN DEL EXCEL: FECHA (reciente → antiguo) + LOTES AGRUPADOS ---
+    // Antes sólo se ordenaba por fecha, por lo que dentro de un mismo día los
+    // equipos de un mismo lote salían DISPERSOS, mezclados con otras ventas.
+    // Ahora cada lote (mismo N° de documento, o cliente+fecha+destino en los
+    // registros antiguos) se mantiene JUNTO y en su orden original,
+    // usando el mismo criterio de agrupación que la tabla del acordeón.
+    const claveLoteDe = (item) => {
+      const documento = String(item.numero_boleta || '').trim();
+      if (documento !== '') return `DOC::${documento}`;
+      const fecha = item.fecha_despacho || item.fecha_venta || '';
+      return `GRUPO::${String(item.cliente || 'N/A').toUpperCase()}::${fecha}::${String(item.destino || '').toUpperCase()}`;
+    };
+
+    // Metadatos por lote: fecha de referencia (la más reciente de sus equipos)
+    // y orden de aparición (para que un lote nunca se parta ni se mezcle).
+    const metadatosLotes = new Map();
+    despachosHechos.forEach((laptop) => {
+      const clave = claveLoteDe(laptop);
+      const fecha = obtenerFechaParaOrdenar(laptop);
+      if (!metadatosLotes.has(clave)) {
+        metadatosLotes.set(clave, { fecha, orden: metadatosLotes.size });
+      } else {
+        const meta = metadatosLotes.get(clave);
+        if (fecha.getTime() > meta.fecha.getTime()) meta.fecha = fecha;
+      }
+    });
+
+    // Posición original de cada equipo para conservar el orden DENTRO del lote
+    const posicionOriginal = new Map(despachosHechos.map((l, i) => [l, i]));
+
     const despachosOrdenados = [...despachosHechos].sort((a, b) => {
-      const fechaA = obtenerFechaParaOrdenar(a);
-      const fechaB = obtenerFechaParaOrdenar(b);
-      return fechaB.getTime() - fechaA.getTime();
+      const metaA = metadatosLotes.get(claveLoteDe(a));
+      const metaB = metadatosLotes.get(claveLoteDe(b));
+
+      // 1) Por fecha del lote: lo más reciente primero
+      const difFecha = metaB.fecha.getTime() - metaA.fecha.getTime();
+      if (difFecha !== 0) return difFecha;
+
+      // 2) Los lotes completos quedan JUNTOS, en su orden de registro
+      if (metaA.orden !== metaB.orden) return metaA.orden - metaB.orden;
+
+      // 3) Dentro del mismo lote se respeta el orden original (escaneo)
+      return posicionOriginal.get(a) - posicionOriginal.get(b);
     });
 
     despachosOrdenados.forEach(laptop => {
