@@ -1432,12 +1432,53 @@ input[type="date"]:hover {
   display: block !important;
   box-sizing: border-box !important;
   padding-bottom: 10px; /* Evita que el scroll tape letras */
+  scrollbar-width: thin; /* Firefox: barra delgada */
+  scrollbar-color: rgba(56, 189, 248, 0.55) rgba(15, 23, 42, 0.55); /* pulgar celeste + pista oscura translúcida */
 }
 
 .table-responsive-wrapper table {
-  min-width: 1000px !important; /* Fuerza a la tabla a no encogerse */
+  min-width: 1300px !important; /* Fuerza a la tabla a no encogerse (14 columnas: N/PEDIDO + N/LOTE) */
   width: 100% !important;
   table-layout: auto !important;
+}
+
+/* --- Scroll oscuro translúcido (Chrome / Edge / Safari) --- */
+.table-responsive-wrapper::-webkit-scrollbar {
+  height: 10px; /* barras horizontales delgadas */
+  width: 10px; /* por si alguna tabla scrollea en vertical */
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.55); /* pista oscura translúcida */
+  border-radius: 999px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.45); /* pulgar celeste translúcido */
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.55); /* separa el pulgar de la pista */
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.75);
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 255, 127, 0.6); /* verde neón al arrastrar */
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-button:single-button {
+  background: rgba(15, 23, 42, 0.55);
+  width: 14px;
+  height: 10px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  border-radius: 999px 0 0 999px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-button:single-button:horizontal:increment {
+  border-radius: 0 999px 999px 0;
 }
 
 /* Protegemos los contenedores padres para que no se estiren */

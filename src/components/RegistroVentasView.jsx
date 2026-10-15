@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Save, Laptop, Cpu, Hash, Smartphone, XCircle, Plus, Trash2, Camera, X, Pencil
 } from 'lucide-react';
@@ -392,6 +392,17 @@ const RegistroVentasView = ({
   // RESTRICCIÓN DE VISIBILIDAD DE PRECIO
   const puedeVerPrecioVenta = usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.rol === 'administrador_ventas';
 
+  // 📦 LOTES EXISTENTES: alimentan el autocompletado del campo "Lote / N° de Pedido".
+  // Se generan desde los propios equipos registrados, así cualquier lote nuevo aparece solo.
+  const lotesExistentes = useMemo(() => {
+    const set = new Set();
+    (laptops || []).forEach(l => {
+      const lote = String(l.lote || '').trim().toUpperCase();
+      if (lote) set.add(lote);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [laptops]);
+
   useEffect(() => {
     if (editandoId && form.serial) {
       setListaSeriales([form.serial.toUpperCase()]);
@@ -435,7 +446,7 @@ const RegistroVentasView = ({
   const hasUserData = () => {
     const fieldsToCheck = [
       'marca', 'modelo', 'precio', 'precio_costo', 'procesador', 'generacion',
-      'ram', 'almacenamiento', 'gpu'
+      'ram', 'almacenamiento', 'gpu', 'lote'
     ];
 
     for (const field of fieldsToCheck) {
@@ -462,6 +473,7 @@ const RegistroVentasView = ({
       gpu: '', pago: 'EFECTIVO',
       estado: 'STOCK', imagenes: [],
       cantidad: 1,
+      lote: '', // 📦 Lote / N° de Pedido
       comentario: '',
       responsable: usuarioLogueado?.nombre,
       encargado: '' // <--- ¡SOLO DEBES AGREGAR ESTA LÍNEA!
@@ -610,6 +622,23 @@ const RegistroVentasView = ({
               value={form.n_pedido || ""}
               onChange={(e) => setForm({ ...form, n_pedido: e.target.value.toUpperCase() })}
             />
+          </div>
+          {/* 📦 Campo LOTE / N° DE PEDIDO: agrupa equipos de la misma compra.
+              Acepta un lote nuevo o sugiere los ya registrados (datalist). */}
+          <div className={styles.campo} style={{ maxWidth: '300px', flex: 1, minWidth: '200px' }}>
+            <label style={{ color: '#00ff7f' }}>📦 LOTE / N° DE PEDIDO</label>
+            <input
+              type="text"
+              name="lote"
+              list="lotes-existentes"
+              placeholder="Ej: LOTE-LENOVO-01..."
+              value={form.lote || ""}
+              onChange={(e) => setForm({ ...form, lote: e.target.value.toUpperCase() })}
+              style={{ border: '1px solid rgba(0, 255, 127, 0.5)', background: 'rgba(0, 255, 127, 0.05)' }}
+            />
+            <datalist id="lotes-existentes">
+              {lotesExistentes.map(lote => <option key={lote} value={lote} />)}
+            </datalist>
           </div>
 {/* Nuevo Campo ENCARGADO / RESPONSABLE */}
           <div className={styles.campo} style={{ maxWidth: '300px', flex: 1, minWidth: '200px' }}>

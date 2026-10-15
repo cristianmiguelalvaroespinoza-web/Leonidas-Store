@@ -20,6 +20,9 @@ const DespachosView = ({ laptops, usuarioLogueado, iniciarEscaneo }) => {
   // --- SELECTOR DE USUARIO: filtra las salidas por quién registró el envío
   // (campo `responsable_despacho`). "TODOS" muestra el historial completo.
   const [filtroUsuario, setFiltroUsuario] = useState("TODOS");
+  // --- SELECTOR DE MODELO: filtra las salidas por marca + modelo del equipo
+  // (ej. "LENOVO IDEAPAD SLIM 3", "LENOVO IDEAPAD 1"). "TODOS" muestra todo.
+  const [filtroModelo, setFiltroModelo] = useState("TODOS");
   const [equipoDetalle, setEquipoDetalle] = useState(null);
   const [mostrarGuia, setMostrarGuia] = useState(false);
   // --- NUEVOS ESTADOS: COMPROBANTE COMERCIAL (BOLETA / NOTA DE VENTA) ---
@@ -81,6 +84,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     setBusqueda("");
     setFiltroFecha("");
     setFiltroUsuario("TODOS"); // Volvemos a mostrar todas las salidas
+    setFiltroModelo("TODOS"); // Volvemos a mostrar todos los modelos
   };
 
   // Revierte un equipo a STOCK (sin diálogos: la confirmación la maneja cada botón)
@@ -157,6 +161,20 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     return Array.from(conjunto).sort((a, b) => a.localeCompare(b));
   }, [todosLosDespachos]);
 
+  // --- MODELOS DISPONIBLES EN EL SELECTOR ---
+  // Se combinan MARCA + MODELO en una sola etiqueta (ej. "LENOVO IDEAPAD SLIM 3",
+  // "LENOVO IDEAPAD 1") para que el usuario pueda distinguir modelos con nombre
+  // parecido. Se generan desde los propios despachos, así cualquier modelo nuevo
+  // aparece solo.
+  const modelosSalida = useMemo(() => {
+    const conjunto = new Set();
+    todosLosDespachos.forEach(lap => {
+      const etiqueta = `${String(lap.marca || '').trim().toUpperCase()} ${String(lap.modelo || '').trim().toUpperCase()}`.trim();
+      if (etiqueta) conjunto.add(etiqueta);
+    });
+    return Array.from(conjunto).sort((a, b) => a.localeCompare(b));
+  }, [todosLosDespachos]);
+
   // --- SALIDAS FILTRADAS (fecha + usuario + búsqueda) ---
   // Se declara AQUÍ (antes de `descargarExcelSalidas`) para que la exportación del
   // Excel pueda usarlo sin referenciarlo antes de su declaración.
@@ -189,6 +207,13 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
         if (usuarioSalida !== filtroUsuario) return false;
       }
 
+      // --- FILTRO POR MODELO (marca + modelo, ej. "LENOVO IDEAPAD SLIM 3") ---
+      // Coincidencia EXACTA en mayúsculas, igual que el selector de usuario.
+      if (filtroModelo !== 'TODOS') {
+        const etiquetaModelo = `${String(lap.marca || '').trim().toUpperCase()} ${String(lap.modelo || '').trim().toUpperCase()}`.trim();
+        if (etiquetaModelo !== filtroModelo) return false;
+      }
+
       // Filtro por fecha
       if (filtroFecha) {
         const [year, month, day] = filtroFecha.split('-');
@@ -219,7 +244,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       const fechaB = obtenerFechaParaOrdenar(b);
       return fechaB.getTime() - fechaA.getTime();
     });
-  }, [laptops, busqueda, filtroFecha, filtroUsuario]);
+  }, [laptops, busqueda, filtroFecha, filtroUsuario, filtroModelo]);
 
   const descargarExcelSalidas = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -256,9 +281,12 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     // 📅 FILA 1: TÍTULO DEL REPORTE + FECHA DE IMPRESIÓN, para dejar constancia
     // del día en que se imprimió/exportó este archivo y del filtro activo.
     // (Si hay un usuario filtrado en la tabla, se indica en el propio título.)
-    const tituloReporte = filtroUsuario && filtroUsuario !== 'TODOS'
-      ? `EXCEL DE SALIDAS - USUARIO: ${filtroUsuario}`
-      : 'EXCEL DE SALIDAS';
+    const tituloReporte = (() => {
+      const etiquetas = [];
+      if (filtroUsuario && filtroUsuario !== 'TODOS') etiquetas.push(`USUARIO: ${filtroUsuario}`);
+      if (filtroModelo && filtroModelo !== 'TODOS') etiquetas.push(`MODELO: ${filtroModelo}`);
+      return etiquetas.length > 0 ? `EXCEL DE SALIDAS - ${etiquetas.join(' | ')}` : 'EXCEL DE SALIDAS';
+    })();
     const momentoImpresion = new Date();
     // Nombre del día en español (LUNES, MARTES, MIÉRCOLES, JUEVES, VIERNES, SÁBADO, DOMINGO)
     const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
@@ -1042,6 +1070,31 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
             <option value="TODOS">👤 TODOS LOS USUARIOS</option>
             {usuariosSalida.map(usuario => (
               <option key={usuario} value={usuario}>{usuario}</option>
+            ))}
+          </select>
+
+          {/* --- SELECTOR DE MODELO: filtra las salidas por marca + modelo --- */}
+          <select
+            value={filtroModelo}
+            onChange={(e) => setFiltroModelo(e.target.value)}
+            title="Filtrar salidas por modelo (marca + modelo)"
+            className="input-calendar-ventas"
+            style={{
+              minWidth: '200px',
+              cursor: 'pointer',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              paddingRight: '32px',
+              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              backgroundSize: '15px'
+            }}
+          >
+            <option value="TODOS">💻 TODOS LOS MODELOS</option>
+            {modelosSalida.map(modelo => (
+              <option key={modelo} value={modelo}>{modelo}</option>
             ))}
           </select>
           <div className="search-box-ventas">

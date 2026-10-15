@@ -24,6 +24,13 @@
   display: flex;
   align-items: center;
   gap: 12px; /* Espacio uniforme entre Botón, Calendario y Buscador */
+  /* FIX buscador de SALIDAS: al añadir el selector de MODELO hay más filtros en la
+     cabecera. Sin wrap, todo queda en una sola línea y el BUSCADOR (que va al final)
+     se desborda hacia la derecha y "casi no se ve". Con wrap baja a la siguiente
+     línea y se muestra completo; min-width:0 permite que el contenedor se encoja
+     dentro del .section-header para que el wrap se active. */
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .report-btn-wa {

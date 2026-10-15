@@ -127,6 +127,7 @@ const [usuarioPendiente, setUsuarioPendiente] = useState(null);
     gpu: '', cliente: '', dni: '', cel: '', destino: '', pago: 'EFECTIVO', 
     estado: 'STOCK', imagenes: [],
     cantidad: 1,
+    lote: '', // 📦 Lote / N° de Pedido: agrupa equipos de la misma compra (varios S/N comparten lote)
     comentario: '', // 💬 Comentario/Observación de la fila (marcador en la TABLA GENERAL)
   });
   const [codigoConfirmacion, setCodigoConfirmacion] = useState(''); // Para el código de formateo
@@ -859,6 +860,10 @@ const enviarInformeDiarioEmailJS = async (params = {}) => {
         ? form.modelo.toUpperCase() 
         : "OTRO";
 
+      // 📦 LOTE: se guarda SOLO si el usuario escribió un lote. El N/PEDIDO NO se
+      // copia aquí nunca (son campos independientes: n_pedido no rellena lote).
+      const loteNormalizado = String(form.lote || '').trim().toUpperCase();
+
       const vVenta = Number(form.precio) || 0;
       const vCosto = Number(form.precio_costo) || 0;
       const utilidadCalculada = vVenta - vCosto;
@@ -870,6 +875,7 @@ const enviarInformeDiarioEmailJS = async (params = {}) => {
         utilidad: utilidadCalculada,
         serial: s, 
         modelo: modeloProcesado,
+        lote: loteNormalizado, // 📦 Lote propio del equipo ('' si no se llenó)
         imagenes: links, // <--- Ahora 'links' garantizadamente son Strings (URLs)
       };
 
@@ -958,6 +964,7 @@ if (!editandoId) {
     almacenamiento: '', gpu: '', cliente: '', dni: '', 
     cel: '', destino: '', pago: 'EFECTIVO', estado: 'STOCK', 
     imagenes: [], cantidad: 1, 
+    lote: '', // 📦 Lote / N° de Pedido
     comentario: '' // 💬 Comentario/Observación de la fila
   });
 };
