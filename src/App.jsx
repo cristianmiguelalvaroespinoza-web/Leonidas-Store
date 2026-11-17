@@ -824,7 +824,7 @@ const enviarInformeDiarioEmailJS = async (params = {}) => {
     const serialEditado = listaSeriales[0]?.trim().toUpperCase();
     // --- CORRECCIÓN DE BUG (NIVEL 2) ---
     // El número de serie solo es estrictamente obligatorio si el equipo se está marcando como 'VENDIDO'.
-    // Para 'STOCK' o 'PENDIENTE', puede guardarse sin serial.
+    // Para 'STOCK' o 'PENDIENTE' (visible como 'REPARACIÓN'), puede guardarse sin serial.
     if (form.estado === 'VENDIDO' && !serialEditado) {
       return alert("❌ Para marcar un equipo como VENDIDO, se requiere un número de serie.");
     }

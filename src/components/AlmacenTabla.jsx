@@ -2,6 +2,8 @@ import React, { useState } from 'react'; // Añadimos useState
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+// 🛠️ Renombrado visual del estado "PENDIENTE" → "REPARACIÓN" (el valor guardado no cambia)
+import { esReparacion, etiquetaEstado } from '../utils/estadosEquipo';
 
 // --- NOMBRES PARA MOSTRAR (SOLO VISUAL, NO AFECTA LOGIN NI DATOS) ---
 // "RAY" se muestra como "TIENDA PRINCIPAL" | "LEONIDAS"/"JEFE" se muestra como "GENERAL"
@@ -112,7 +114,7 @@ const AlmacenTabla = ({
           disco: l.almacenamiento || l.disco || 'N/A',
           serial: l.serial,
           precio: l.precio || 0,
-          estado: l.estado || "STOCK"
+          estado: etiquetaEstado(l.estado) // 🛠️ "PENDIENTE" se exporta como "REPARACIÓN"
         };
 
         if (usuarioLogueado?.rol === 'super_admin') {
@@ -288,11 +290,11 @@ const AlmacenTabla = ({
                         <td style={estiloCelda}>
                           <span style={{ 
                             fontSize: '10px',
-                            color: esVendido ? '#ef4444' : (l.estado?.toUpperCase() === 'PENDIENTE' ? '#f59e0b' : '#00ff7f'),
+                            color: esVendido ? '#ef4444' : (esReparacion(l.estado) ? '#f59e0b' : '#00ff7f'),
                             textTransform: 'uppercase',
                             fontWeight: 'bold'
                           }}>
-                            {l.estado || "STOCK"}
+                            {etiquetaEstado(l.estado)}
                           </span>
                         </td>
                         <td style={estiloCelda}>

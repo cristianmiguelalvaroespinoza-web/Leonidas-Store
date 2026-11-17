@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { generarPDFDesdeElemento } from "../utils/generarPDFDocumento";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { X, Printer, User, MapPin, CalendarDays, Search, Package, Truck, RotateCcw, PlusCircle, FileDown, QrCode, Trash2, FileText, ChevronDown, Tag } from 'lucide-react'; 
+import { X, Printer, User, MapPin, CalendarDays, Search, Package, Truck, RotateCcw, PlusCircle, FileDown, QrCode, Trash2, FileText, ChevronDown, Tag, Pencil } from 'lucide-react'; 
 import logoFinpro from '../assets/logo-finpro.png'; // Logo oficial para el comprobante comercial
 import { doc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore"; // Importación necesaria
 import { db } from "../firebase"; // Asegúrate que la ruta sea correcta
@@ -31,6 +31,29 @@ const DespachosView = ({ laptops, usuarioLogueado, iniciarEscaneo }) => {
   const [tipoComprobante, setTipoComprobante] = useState("BOLETA"); // "BOLETA" o "NOTA" (misma lógica que en Ventas)
   const [mostrarModalVentaRapida, setMostrarModalVentaRapida] = useState(false);
   const [cargandoVentaRapida, setCargandoVentaRapida] = useState(false);
+  // --- ESTADOS DEL MODAL "EDITAR SALIDA" (SIN REVERTIR) ---
+  // Permite corregir los datos de una salida ya despachada (fecha, cliente,
+  // destino, precios, responsable...) sin devolver los equipos a STOCK.
+  const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
+  const [salidaEditando, setSalidaEditando] = useState(null); // lote / venta seleccionado
+  const [cargandoEdicion, setCargandoEdicion] = useState(false);
+  const [edicionForm, setEdicionForm] = useState({
+    fecha_despacho: '',
+    n_pedido: '',
+    cliente: '',
+    destino: '',
+    precio_total: '',
+    responsable: '',
+    dni: '',
+    despachador: ''
+  });
+  // --- FILAS "AGREGAR MÁS EQUIPOS" DENTRO DEL MODAL DE EDICIÓN ---
+  // Cada fila es un equipo EXTRA que se sumará a la MISMA salida al guardar,
+  // con los mismos datos comunes (fecha, cliente, destino, responsable) y con
+  // estado VENDIDO + DESPACHADO (nada vuelve a STOCK).
+  const [equiposNuevosEdicion, setEquiposNuevosEdicion] = useState([]);
+  const idFilaNuevaEdicion = useRef(0); // id incremental para identificar cada fila
+  const debounceSerialEdicion = useRef({}); // debounce de búsqueda por id de fila
   // --- ESTADOS DEL MODAL DE SALIDA RÁPIDA CON ESCANEO MÚLTIPLE (LOTES) ---
   // ventaRapidaForm guarda SOLO los datos comunes a todo el lote (no repetibles)
   const [ventaRapidaForm, setVentaRapidaForm] = useState({
@@ -43,6 +66,7 @@ const DespachosView = ({ laptops, usuarioLogueado, iniciarEscaneo }) => {
     despachador: '' // Persona que hace el despacho físico (distinto del responsable de envío)
   });
   const [cantidadEquiposLote, setCantidadEquiposLote] = useState(1); // Cantidad de equipos del lote
+  const [cantidadInputTexto, setCantidadInputTexto] = useState(String(cantidadEquiposLote)); // Texto libre del input de cantidad (se puede borrar y escribir con el teclado)
   const [equiposLote, setEquiposLote] = useState([{ serial: '', modelo: '' }]); // Una fila por equipo
   // --- MODO "PRECIO ESPECÍFICO" (solo disponible con 2 o más equipos) ---
   // Permite asignar un precio individual a cada laptop del lote. Cuando está activo,
@@ -56,14 +80,15 @@ const DespachosView = ({ laptops, usuarioLogueado, iniciarEscaneo }) => {
   const [equiposGuiaLote, setEquiposGuiaLote] = useState([]); // equipos que se listan en la Guía de Envío
   const [equiposLoteComprobante, setEquiposLoteComprobante] = useState(null); // equipos del comprobante consolidado
 
-  // --- FIX: Bloquea el scroll del fondo mientras el modal de Salida Rápida esté abierto ---
+  // --- FIX: Bloquea el scroll del fondo mientras el modal de Salida Rápida
+  // o el modal de Edición de Salida estén abiertos ---
   useEffect(() => {
-    if (mostrarModalVentaRapida) {
+    if (mostrarModalVentaRapida || mostrarModalEdicion) {
       const overflowPrevio = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => { document.body.style.overflow = overflowPrevio; };
     }
-  }, [mostrarModalVentaRapida]);
+  }, [mostrarModalVentaRapida, mostrarModalEdicion]);
 
 // Asegúrate de que esta línea diga "inventario"
 const handlePrecioChange = async (id, nuevoPrecio) => {
@@ -142,6 +167,408 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       }
     }
   };
+
+  // ============================================================
+  // --- EDICIÓN DE SALIDA SIN REVERTIR ---
+  // Corrige los datos de una salida ya despachada (fecha, cliente,
+  // destino, precios, responsable...) sin devolver los equipos a
+  // STOCK: SOLO se actualizan los campos de la venta y NUNCA se
+  // tocan `estado` ni `estado_despacho`, por lo que la salida sigue
+  // registrada y los equipos siguen DESPACHADOS.
+  // ============================================================
+
+  // Convierte "DD/MM/YYYY" (formato guardado en Firestore) a
+  // "YYYY-MM-DD" (formato que necesita <input type="date">).
+  const fechaAInputFecha = (fechaStr) => {
+    const partes = String(fechaStr || '').split('/');
+    if (partes.length !== 3) return '';
+    const [d, m, y] = partes;
+    if (!d || !m || !y) return '';
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  };
+
+  // Abre el modal de edición precargado con los datos actuales del lote / venta
+  const abrirEdicionSalida = (lote) => {
+    const equipoPrincipal = lote.equipos[0] || {};
+    setSalidaEditando(lote);
+    setEdicionForm({
+      fecha_despacho: fechaAInputFecha(lote.fecha),
+      n_pedido: lote.n_pedido || '',
+      // El cliente se guarda como 'N/A' cuando no se registró: en el formulario
+      // se muestra vacío para que no parezca un nombre real.
+      cliente: String(lote.cliente || '').trim().toUpperCase() === 'N/A' ? '' : (lote.cliente || ''),
+      destino: lote.destino || '',
+      precio_total: String(lote.precioTotal || 0),
+      responsable: lote.responsable || '',
+      dni: equipoPrincipal.dni || '',
+      despachador: lote.despachador || ''
+    });
+    // Las filas "agregar equipos" inician con UNA fila vacía (se ignora al guardar
+    // si el usuario no la usa) y cualquier debounce pendiente de una edición previa
+    // se cancela para no autocomplete filas viejas.
+    Object.values(debounceSerialEdicion.current).forEach(t => clearTimeout(t));
+    debounceSerialEdicion.current = {};
+    setEquiposNuevosEdicion([{
+      id: ++idFilaNuevaEdicion.current,
+      serial: '',
+      modelo: '',
+      precio: '',
+      estadoSerial: null,   // 'buscando' | 'encontrado' | 'no-encontrado' | null
+      fireId: null,
+      costoBase: null,
+      estadoInventario: null,
+      yaDespachado: false   // true si el equipo encontrado ya está en OTRA salida
+    }]);
+    setMostrarModalEdicion(true);
+  };
+
+  // Cierra el modal de edición y limpia las filas de equipos nuevos
+  const cerrarEdicionSalida = () => {
+    Object.values(debounceSerialEdicion.current).forEach(t => clearTimeout(t));
+    debounceSerialEdicion.current = {};
+    setMostrarModalEdicion(false);
+    setSalidaEditando(null);
+    setEquiposNuevosEdicion([]);
+  };
+
+  const handleEdicionFormChange = (e) => {
+    const { name, value } = e.target;
+    setEdicionForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Guarda los cambios en Firestore SIN tocar estado/estado_despacho
+  // (a diferencia de "Revertir", nada vuelve a STOCK).
+  const handleGuardarEdicionSalida = async (e) => {
+    e.preventDefault();
+    if (!salidaEditando || !salidaEditando.equipos || salidaEditando.equipos.length === 0) return;
+
+    const { fecha_despacho, n_pedido, cliente, destino, precio_total, responsable, dni, despachador } = edicionForm;
+
+    if (!fecha_despacho || !responsable.trim()) {
+      alert('⚠️ Completa los campos requeridos: Fecha de Despacho y Responsable.');
+      return;
+    }
+
+    const equiposConId = salidaEditando.equipos.filter(eq => eq.fireId);
+    if (equiposConId.length === 0) {
+      alert('❌ No se pudo identificar ningún equipo de esta salida.');
+      return;
+    }
+
+    setCargandoEdicion(true);
+
+    try {
+      const [y, m, d] = fecha_despacho.split('-');
+      const fechaFormateada = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
+      const clienteFinal = (cliente || '').trim().toUpperCase() || 'N/A';
+      const destinoFinal = (destino || '').trim().toUpperCase() || 'LIMA';
+      const responsableFinal = responsable.trim().toUpperCase();
+      const dniFinal = (dni || '').trim().toUpperCase();
+      const despachadorFinal = (despachador || '').trim().toUpperCase() || responsableFinal;
+      const nPedidoFinal = (n_pedido || '').trim() || null;
+
+      // PRECIO: solo se toca si el usuario cambió el total respecto al mostrado
+      // en la tabla. Así se respetan los precios individuales ya ajustados fila
+      // por fila. El reparto es el mismo que en Salida Rápida (el último equipo
+      // absorbe el redondeo).
+      const precioTotalNuevo = Number(precio_total);
+      const precioTotalAnterior = Number(salidaEditando.precioTotal) || 0;
+      const cambiaPrecio = precio_total !== ''
+        && Number.isFinite(precioTotalNuevo)
+        && Math.abs(precioTotalNuevo - precioTotalAnterior) > 0.009;
+
+      const cantidad = salidaEditando.equipos.length;
+      const precioUnitarioBase = cantidad > 0 ? Number((precioTotalNuevo / cantidad).toFixed(2)) : 0;
+
+      // Campos comunes que comparten TODOS los equipos de la salida (los actuales
+      // y los que se agreguen). OJO: NO incluyen `estado` ni `estado_despacho` ->
+      // editar o agregar nunca revierte la salida a STOCK.
+      const camposComunes = {
+        fecha_despacho: fechaFormateada,
+        fecha_venta: fechaFormateada,
+        fecha: fechaFormateada,
+        n_pedido: nPedidoFinal,
+        cliente: clienteFinal,
+        dni: dniFinal,
+        despachador: despachadorFinal,
+        destino: destinoFinal,
+        responsable: responsableFinal,
+        responsable_venta: responsableFinal,
+        responsable_despacho: responsableFinal,
+        vendedor_final: responsableFinal
+      };
+
+      let actualizados = 0;
+      for (let i = 0; i < salidaEditando.equipos.length; i++) {
+        const equipo = salidaEditando.equipos[i];
+        if (!equipo.fireId) continue;
+
+        // Campos comunes de la salida. OJO: NO se incluyen `estado` ni
+        // `estado_despacho` a propósito -> la salida no se revierte.
+        const datos = { ...camposComunes };
+
+        if (cambiaPrecio) {
+          const precioEquipo = i === cantidad - 1
+            ? Number((precioTotalNuevo - precioUnitarioBase * (cantidad - 1)).toFixed(2))
+            : precioUnitarioBase;
+          datos.precio = precioEquipo;
+          datos.utilidad = precioEquipo - (Number(equipo.precio_costo) || 0);
+        }
+
+        await updateDoc(doc(db, 'inventario', equipo.fireId), datos);
+        actualizados++;
+      }
+
+      // Contadores de la sección "agregar equipos" (paso 2)
+      let agregados = 0;
+      let creadosNuevos = 0;
+
+      // ============================================================
+      // 2) AGREGAR LOS EQUIPOS NUEVOS a la MISMA salida (sin revertir)
+      //    - Solo las filas con serial o modelo (las vacías se ignoran).
+      //    - Si el serial ya existe en inventario: se ACTUALIZA y pasa a
+      //      VENDIDO + DESPACHADO con los datos comunes de la salida.
+      //    - Si no existe: se crea como equipo externo (como en Salida Rápida).
+      // ============================================================
+      const filasNuevas = equiposNuevosEdicion.filter(f =>
+        String(f.serial || '').trim() || String(f.modelo || '').trim()
+      );
+
+      if (filasNuevas.length > 0) {
+        // 🛡️ Duplicados: dentro de las filas nuevas y contra los equipos ACTUALES
+        // de la salida (comparación con `normalizarSerial`: mayúsculas y sin espacios).
+        const serialesNuevos = filasNuevas.map(f => normalizarSerial(f.serial)).filter(Boolean);
+        const repetido = serialesNuevos.find((s, i) => serialesNuevos.indexOf(s) !== i);
+        const serialesDelLote = new Set(
+          salidaEditando.equipos.map(eq => normalizarSerial(eq.serial)).filter(Boolean)
+        );
+        const choqueConLote = filasNuevas.find(f => {
+          const s = normalizarSerial(f.serial);
+          return !!s && serialesDelLote.has(s);
+        });
+        if (repetido || choqueConLote) {
+          alert(`⚠️ El N° de serie "${choqueConLote ? choqueConLote.serial : repetido}" ya está repetido (en esta salida o en las filas nuevas). Corrígelo antes de guardar.`);
+          return;
+        }
+
+        // Pre-búsqueda en Firestore: TODA la validación ocurre ANTES de escribir,
+        // así no quedan cambios parciales si un equipo ya pertenece a otra salida.
+        const procesarNuevos = [];
+        for (const fila of filasNuevas) {
+          const serial = String(fila.serial || '').trim().toUpperCase();
+          let equipoDoc = null;
+          if (serial) {
+            const q = query(collection(db, "inventario"), where("serial", "==", serial));
+            const snap = await getDocs(q);
+            if (!snap.empty) equipoDoc = snap.docs[0];
+          }
+          if (equipoDoc) {
+            const info = equipoDoc.data();
+            // ¿El equipo encontrado ya está en ESTE lote? Entonces ya se actualizó en el paso 1
+            const yaEnEstaSalida = salidaEditando.equipos.some(eq => eq.fireId === equipoDoc.id);
+            if (yaEnEstaSalida) continue;
+            // Pertenece a OTRA salida: se bloquea el guardado completo (sin escrituras)
+            if (String(info.estado_despacho || '').toUpperCase() === 'DESPACHADO') {
+              alert(`❌ El equipo con serial "${serial}" ya pertenece a otra salida. Quítalo de esta lista para poder guardar.`);
+              return;
+            }
+          }
+          procesarNuevos.push({ fila, serial, equipoDoc });
+        }
+
+        // Escritura de los equipos nuevos
+        for (let i = 0; i < procesarNuevos.length; i++) {
+          const { fila, serial, equipoDoc } = procesarNuevos[i];
+          const modelo = String(fila.modelo || '').trim().toUpperCase();
+          const precioNuevo = Number(fila.precio) || 0;
+          const serialFinal = serial || `EXT-${Date.now()}-${i + 1}`;
+
+          if (equipoDoc) {
+            // Serial existente en inventario: se conservan sus datos técnicos y
+            // se marcan los campos de salida (esto AGREGA, nunca revierte).
+            const info = equipoDoc.data();
+            await updateDoc(doc(db, 'inventario', equipoDoc.id), {
+              ...camposComunes,
+              estado: 'VENDIDO',
+              estado_despacho: 'DESPACHADO',
+              numero_boleta: salidaEditando.documento || null,
+              serial: serialFinal,
+              marca: info.marca || 'EXTERNO',
+              modelo: modelo || info.modelo || 'EXTERNO',
+              precio: precioNuevo,
+              utilidad: precioNuevo - (Number(info.precio_costo) || 0),
+              cantidad: 1
+            });
+            agregados++;
+          } else {
+            // Serial nuevo (o sin serial): equipo externo dentro de la misma salida
+            const nuevoRef = doc(collection(db, 'inventario'));
+            await setDoc(nuevoRef, {
+              ...camposComunes,
+              estado: 'VENDIDO',
+              estado_despacho: 'DESPACHADO',
+              numero_boleta: salidaEditando.documento || null,
+              serial: serialFinal,
+              marca: 'EXTERNO',
+              modelo: modelo || 'EXTERNO',
+              precio: precioNuevo,
+              precio_costo: 0,
+              utilidad: precioNuevo,
+              cantidad: 1
+            });
+            creadosNuevos++;
+          }
+        }
+      }
+
+      alert(
+        '✅ Salida actualizada con éxito.\n' +
+        `• Equipos existentes actualizados: ${actualizados}\n` +
+        `• Equipos agregados a la salida: ${agregados + creadosNuevos}${creadosNuevos > 0 ? ` (${creadosNuevos} nuevos en inventario)` : ''}\n` +
+        `• Cliente: ${clienteFinal}\n` +
+        `• Destino: ${destinoFinal}\n` +
+        `• Fecha: ${fechaFormateada}` +
+        (cambiaPrecio ? `\n• Nuevo total: S/ ${precioTotalNuevo.toFixed(2)}` : '') +
+        '\n\nTodos los equipos siguen/quedan DESPACHADOS: no se revirtió nada a STOCK.'
+      );
+
+      cerrarEdicionSalida();
+    } catch (error) {
+      console.error('Error al editar la salida:', error);
+      alert('❌ Hubo un error al editar la salida: ' + error.message);
+    } finally {
+      setCargandoEdicion(false);
+    }
+  };
+
+  // ============================================================
+  // --- HELPERS DE LAS FILAS "AGREGAR EQUIPOS" (MODAL DE EDICIÓN) ---
+  // Mismo patrón que el modal de Salida Rápida: autocompletado desde
+  // inventario con debounce, escáner QR/barras y detección de duplicados.
+  // ============================================================
+  const agregarFilaEquipoNuevo = () => {
+    const id = ++idFilaNuevaEdicion.current;
+    setEquiposNuevosEdicion(prev => [...prev, {
+      id,
+      serial: '',
+      modelo: '',
+      precio: '',
+      estadoSerial: null,
+      fireId: null,
+      costoBase: null,
+      estadoInventario: null,
+      yaDespachado: false
+    }]);
+  };
+
+  const quitarFilaEquipoNuevo = (filaId) => {
+    if (debounceSerialEdicion.current[filaId]) {
+      clearTimeout(debounceSerialEdicion.current[filaId]);
+      delete debounceSerialEdicion.current[filaId];
+    }
+    setEquiposNuevosEdicion(prev => prev.filter(f => f.id !== filaId));
+  };
+
+  const handleFilaNuevoEdicionChange = (e, filaId, campo) => {
+    const { value } = e.target;
+    setEquiposNuevosEdicion(prev => prev.map(f => {
+      if (f.id !== filaId) return f;
+      if (campo === 'serial') {
+        // Al cambiar el serial se limpia la búsqueda anterior de ESA fila
+        return { ...f, serial: value, modelo: '', estadoSerial: null, fireId: null, costoBase: null, estadoInventario: null, yaDespachado: false };
+      }
+      return { ...f, [campo]: value };
+    }));
+    if (campo === 'serial') programarBusquedaSerialEdicion(filaId, value);
+  };
+
+  // Busca el equipo por serial y actualiza SOLO su fila (autocompletado de
+  // modelo + aviso si el equipo encontrado ya pertenece a otra salida)
+  const buscarSerialEnEdicion = async (filaId, serial) => {
+    const limpio = String(serial || '').trim();
+    if (!limpio) {
+      setEquiposNuevosEdicion(prev => prev.map(f => f.id === filaId
+        ? { ...f, estadoSerial: null, fireId: null, costoBase: null, estadoInventario: null, yaDespachado: false }
+        : f));
+      return;
+    }
+
+    setEquiposNuevosEdicion(prev => prev.map(f => f.id === filaId ? { ...f, estadoSerial: 'buscando' } : f));
+    const equipo = await buscarEquipoPorSerial(limpio);
+
+    setEquiposNuevosEdicion(prev => prev.map(f => {
+      if (f.id !== filaId) return f;
+      // Si el usuario siguió escribiendo, la respuesta ya no corresponde
+      if (normalizarSerial(f.serial) !== normalizarSerial(limpio)) return f;
+      if (!equipo) {
+        return { ...f, estadoSerial: 'no-encontrado', fireId: null, costoBase: null, estadoInventario: null, yaDespachado: false };
+      }
+      const modeloInventario = equipo.modelo || equipo.laptop_modelo || equipo.nombre || '';
+      return {
+        ...f,
+        modelo: modeloInventario || f.modelo,
+        fireId: equipo.fireId || null,
+        costoBase: equipo.precio_costo ?? null,
+        estadoInventario: equipo.estado || null,
+        yaDespachado: String(equipo.estado_despacho || '').toUpperCase() === 'DESPACHADO',
+        estadoSerial: modeloInventario ? 'encontrado' : 'no-encontrado'
+      };
+    }));
+  };
+
+  // Debounce de 400 ms mientras se escribe el serial (igual que Salida Rápida)
+  const programarBusquedaSerialEdicion = (filaId, serial) => {
+    if (debounceSerialEdicion.current[filaId]) {
+      clearTimeout(debounceSerialEdicion.current[filaId]);
+    }
+    debounceSerialEdicion.current[filaId] = setTimeout(() => {
+      delete debounceSerialEdicion.current[filaId];
+      buscarSerialEnEdicion(filaId, serial);
+    }, 400);
+  };
+
+  // Escáner QR / código de barras dirigido a la fila exacta del modal de edición
+  const escanearSerialEnEdicion = (filaId) => {
+    if (typeof iniciarEscaneo !== 'function') return;
+    iniciarEscaneo((valorEscaneado) => {
+      const serial = String(valorEscaneado || '').toUpperCase();
+      if (debounceSerialEdicion.current[filaId]) {
+        clearTimeout(debounceSerialEdicion.current[filaId]);
+        delete debounceSerialEdicion.current[filaId];
+      }
+      setEquiposNuevosEdicion(prev => prev.map(f => f.id === filaId
+        ? { ...f, serial, modelo: '', estadoSerial: null, fireId: null, yaDespachado: false }
+        : f));
+      buscarSerialEnEdicion(filaId, serial);
+    });
+  };
+
+  // 🛡️ Seriales repetidos: entre las filas nuevas y contra los equipos que YA
+  // forman la salida. Las filas afectadas se marcan en ROJO y se bloquea el guardado.
+  const duplicadosNuevosEdicion = useMemo(() => {
+    const repetidos = new Set();
+    const conteo = new Map();
+    equiposNuevosEdicion.forEach(f => {
+      const s = normalizarSerial(f.serial);
+      if (s) conteo.set(s, (conteo.get(s) || 0) + 1);
+    });
+    const serialesLote = new Set((salidaEditando?.equipos || []).map(eq => normalizarSerial(eq.serial)).filter(Boolean));
+    equiposNuevosEdicion.forEach(f => {
+      const s = normalizarSerial(f.serial);
+      if (s && (conteo.get(s) > 1 || serialesLote.has(s))) repetidos.add(f.id);
+    });
+    return repetidos;
+  }, [equiposNuevosEdicion, salidaEditando]);
+
+  // Conflicto total (repetidos o equipos que ya están en OTRA salida):
+  // bloquea el botón "Guardar Cambios" hasta corregir las filas en rojo.
+  const hayConflictoNuevosEdicion = duplicadosNuevosEdicion.size > 0
+    || equiposNuevosEdicion.some(f => f.yaDespachado);
+
+  // Al desmontar el componente se cancelan los debounces de las filas nuevas
+  useEffect(() => () => {
+    Object.values(debounceSerialEdicion.current).forEach(t => clearTimeout(t));
+  }, []);
 
   const todosLosDespachos = useMemo(() => {
     return laptops.filter(lap => 
@@ -542,6 +969,32 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
     equiposLoteRef.current = equiposLote;
   }, [equiposLote]);
 
+  /* ================================================================================
+     🛡️ SERIALES REPETIDOS DENTRO DEL MISMO LOTE (DETECCIÓN EN TIEMPO REAL)
+     Se recalcula con cada tecla / escaneo. La comparación usa `normalizarSerial`
+     (mayúsculas y sin espacios) para que "PF63 MRY6" y "PF63MRY6" cuenten como
+     el MISMO equipo. Si hay repetidos:
+       - las filas afectadas se marcan en ROJO con un aviso bajo el campo,
+       - el badge "✓ Modelo autocompletado" deja de mostrarse en esas filas,
+       - el botón "Guardar Venta" queda DESHABILITADO.
+     ================================================================================ */
+  const indicesSerialRepetido = useMemo(() => {
+    const conteo = new Map();
+    equiposLote.forEach(eq => {
+      const s = normalizarSerial(eq.serial);
+      if (s) conteo.set(s, (conteo.get(s) || 0) + 1);
+    });
+    const repetidos = new Set();
+    equiposLote.forEach((eq, i) => {
+      const s = normalizarSerial(eq.serial);
+      if (s && conteo.get(s) > 1) repetidos.add(i);
+    });
+    return repetidos;
+  }, [equiposLote]);
+
+  // ¿El lote tiene al menos un N° de serie repetido? (bloquea el guardado)
+  const haySerialRepetidoEnLote = indicesSerialRepetido.size > 0;
+
   // Al desmontar el componente se cancelan los debounces pendientes
   useEffect(() => () => {
     Object.values(temporizadoresDebounce.current).forEach(t => clearTimeout(t));
@@ -706,11 +1159,13 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       return;
     }
 
-    // 2. Evitamos seriales repetidos dentro del mismo lote
-    const serialesDelLote = equiposNormalizados.map(eq => eq.serial).filter(Boolean);
+    // 2. 🛡️ SEGURIDAD: evitamos seriales repetidos dentro del mismo lote.
+    //    Se comparan NORMALIZADOS (mayúsculas y sin espacios) para que
+    //    "PF63 MRY6" y "PF63MRY6" también se detecten como duplicados.
+    const serialesDelLote = equiposNormalizados.map(eq => normalizarSerial(eq.serial)).filter(Boolean);
     const serialRepetido = serialesDelLote.find((serial, i) => serialesDelLote.indexOf(serial) !== i);
     if (serialRepetido) {
-      alert(`⚠️ El serial "${serialRepetido}" está repetido en el lote. Corrígelo antes de guardar.`);
+      alert(`⚠️ El N° de serie "${serialRepetido}" está repetido en el lote. Cada equipo debe tener un serial distinto. Corrígelo antes de guardar.`);
       setCargandoVentaRapida(false);
       return;
     }
@@ -1236,6 +1691,16 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                         <FileText size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }}/>
                         Ver Comprobante
                       </button>
+                      {/* --- EDITAR SALIDA: corrige los datos del pedido SIN revertirlo
+                          (los equipos siguen DESPACHADOS, nada vuelve a STOCK) --- */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); abrirEdicionSalida(lote); }}
+                        title="Editar los datos de la salida (fecha, cliente, destino, precios, responsable...) sin revertirla"
+                        style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                        <Pencil size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }}/>
+                        Editar
+                      </button>
                     </div>
                   </td>
                   {modoEliminar && (
@@ -1645,6 +2110,356 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
           pantalla), así los campos largos y los botones Guardar/Cancelar siempre
           se pueden alcanzar. Es el ÚNICO scroll: la lista de equipos ya no tiene
           scroll propio (antes generaba un doble scroll incómodo). Ver VentasView.css. */}
+      {/* ============================================================ */}
+      {/* MODAL: EDITAR SALIDA SIN REVERTIR                            */}
+      {/* Corrige los datos de una salida ya despachada. NO toca        */}
+      {/* `estado` ni `estado_despacho`: los equipos siguen DESPACHADOS */}
+      {/* y nada vuelve a STOCK (a diferencia de "Revertir").           */}
+      {/* createPortal: mismo fix de position:fixed que los demás.      */}
+      {/* ============================================================ */}
+      {mostrarModalEdicion && salidaEditando && createPortal(
+        <div 
+          className="overlay-informe-leonidas" 
+          onClick={() => cerrarEdicionSalida()}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+            padding: '15px',
+            overflowY: 'auto',
+            boxSizing: 'border-box',
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
+          <div 
+            className="modal-panel-venta-rapida modal-venta-lote" 
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: '#1e293b',
+              color: 'white',
+              borderRadius: '12px',
+              margin: 'auto',
+              boxSizing: 'border-box',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+              border: '1px solid #f59e0b'
+            }}
+          >
+            <div className="cabecera-modal-lote">
+              <h3 style={{ color: '#f59e0b' }}>✏️ Editar SALIDA</h3>
+              <p>
+                Corrige los datos del pedido. Los equipos siguen <strong style={{ color: '#00ff7f' }}>DESPACHADOS</strong>:
+                no se revierte nada a STOCK.
+              </p>
+            </div>
+
+            <form onSubmit={handleGuardarEdicionSalida}>
+              {/* Cuerpo con scroll propio (mismo patrón que Salida Rápida) */}
+              <div className="cuerpo-scroll-lote">
+                <div className="seccion-datos-lote">
+                  <span className="titulo-seccion-rapida">📋 Datos de la salida</span>
+
+                  {/* Resumen del lote / venta que se está editando */}
+                  <small
+                    style={{
+                      display: 'block',
+                      color: '#94a3b8',
+                      fontSize: '0.75rem',
+                      margin: '-4px 0 4px 0'
+                    }}
+                  >
+                    {salidaEditando.equipos.length} {salidaEditando.equipos.length === 1 ? 'equipo' : 'equipos'}
+                    {' · '}Doc: {salidaEditando.documento || 'sin documento'}
+                    {' · '}Serial{salidaEditando.equipos.length > 1 ? 'es' : ''}: {' '}
+                    {salidaEditando.equipos.map(eq => eq.serial || 'N/A').join(', ')}
+                  </small>
+
+                  <div className="form-grid-rapido">
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_fecha">Fecha de Despacho</label>
+                      <input
+                        id="edicion_fecha"
+                        name="fecha_despacho"
+                        type="date"
+                        value={edicionForm.fecha_despacho}
+                        onChange={handleEdicionFormChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_n_pedido">N° Pedido (Opcional)</label>
+                      <input
+                        id="edicion_n_pedido"
+                        name="n_pedido"
+                        type="text"
+                        placeholder="Ej: 001"
+                        value={edicionForm.n_pedido}
+                        onChange={handleEdicionFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-grid-rapido">
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_cliente">Cliente</label>
+                      <input
+                        id="edicion_cliente"
+                        name="cliente"
+                        type="text"
+                        placeholder="Nombre del cliente"
+                        value={edicionForm.cliente}
+                        onChange={handleEdicionFormChange}
+                      />
+                    </div>
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_destino">Destino</label>
+                      <input
+                        id="edicion_destino"
+                        name="destino"
+                        type="text"
+                        placeholder="Ej: AREQUIPA"
+                        value={edicionForm.destino}
+                        onChange={handleEdicionFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-grid-rapido">
+                    <div className="form-campo-rapido campo-precio-total-lote">
+                      <label htmlFor="edicion_precio_total">Precio de Venta Total (S/)</label>
+                      <input
+                        id="edicion_precio_total"
+                        name="precio_total"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={edicionForm.precio_total}
+                        onChange={handleEdicionFormChange}
+                      />
+                      {salidaEditando.equipos.length > 1 && (
+                        <small className="texto-total-calculado">
+                          Se reparte entre los {salidaEditando.equipos.length} equipos (igual que al registrar).
+                          Si no cambias el total, se conservan los precios individuales.
+                        </small>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RESPONSABLE + DNI + DESPACHADOR: 3 columnas (igual que Salida Rápida) */}
+                  <div className="form-grid-rapido-3">
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_responsable">Responsable</label>
+                      <input
+                        id="edicion_responsable"
+                        name="responsable"
+                        type="text"
+                        placeholder="Nombre del responsable"
+                        value={edicionForm.responsable}
+                        onChange={handleEdicionFormChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_dni">DNI (Opcional)</label>
+                      <input
+                        id="edicion_dni"
+                        name="dni"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={12}
+                        placeholder="DNI del responsable"
+                        value={edicionForm.dni}
+                        onChange={handleEdicionFormChange}
+                      />
+                    </div>
+                    <div className="form-campo-rapido">
+                      <label htmlFor="edicion_despachador">Despachador</label>
+                      <input
+                        id="edicion_despachador"
+                        name="despachador"
+                        type="text"
+                        placeholder="Persona que despacha"
+                        value={edicionForm.despachador}
+                        onChange={handleEdicionFormChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* --- AGREGAR MÁS EQUIPOS A ESTA SALIDA (SIN REVERTIR) ---
+                    Mismo patrón de escaneo múltiple que Salida Rápida: cada fila
+                    se guardará dentro de ESTA salida con los datos comunes y con
+                    estado VENDIDO + DESPACHADO. Las filas vacías se ignoran. */}
+                <div className="seccion-equipos-lote" style={{ marginTop: '12px' }}>
+                  <div className="cabecera-seccion-equipos">
+                    <span className="titulo-seccion-rapida">➕ Agregar más equipos a esta salida</span>
+                    <span className="contador-equipos-lote">
+                      {equiposNuevosEdicion.length} {equiposNuevosEdicion.length === 1 ? 'fila' : 'filas'}
+                    </span>
+                  </div>
+                  <small style={{ display: 'block', color: '#94a3b8', fontSize: '0.72rem', margin: '-2px 0 4px 0' }}>
+                    Se guardarán con los mismos datos de la salida (fecha, cliente, destino, responsable) y quedarán
+                    como <strong style={{ color: '#00ff7f' }}>DESPACHADOS</strong>. Cada equipo nuevo usa su propio
+                    precio (el Precio Total de arriba aplica solo a los {salidaEditando.equipos.length}{' '}
+                    {salidaEditando.equipos.length === 1 ? 'equipo actual' : 'equipos actuales'}).
+                  </small>
+
+                  {equiposNuevosEdicion.map((fila, index) => (
+                    <div
+                      className="fila-equipo-lote"
+                      key={fila.id}
+                      style={(duplicadosNuevosEdicion.has(fila.id) || fila.yaDespachado) ? { borderColor: '#ef4444', boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.5)' } : undefined}
+                    >
+                        <div className="cabecera-equipo-lote" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span className="badge-equipo-lote">Agregar #{index + 1}</span>
+                          {fila.estadoSerial === 'buscando' && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#94a3b8' }}>
+                              🔍 Buscando en inventario...
+                            </span>
+                          )}
+                          {fila.estadoSerial === 'encontrado' && !duplicadosNuevosEdicion.has(fila.id) && !fila.yaDespachado && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#00ff7f' }}>
+                              ✓ {fila.modelo || 'Equipo encontrado'}{fila.estadoInventario ? ` · ${fila.estadoInventario}` : ''}
+                            </span>
+                          )}
+                          {fila.estadoSerial === 'no-encontrado' && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#f59e0b' }}>
+                              ⚠ No está en inventario: se registrará como externo
+                            </span>
+                          )}
+                          {duplicadosNuevosEdicion.has(fila.id) && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#ef4444' }}>
+                              ⛔ N° de serie repetido (en esta salida o en otra fila)
+                            </span>
+                          )}
+                          {fila.yaDespachado && !duplicadosNuevosEdicion.has(fila.id) && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#ef4444' }}>
+                              ⛔ Este equipo ya pertenece a otra salida
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => quitarFilaEquipoNuevo(fila.id)}
+                            title="Quitar esta fila"
+                            style={{
+                              marginLeft: 'auto', background: 'rgba(239,68,68,0.15)',
+                              border: '1px solid rgba(239,68,68,0.5)', color: '#ef4444',
+                              borderRadius: '4px', cursor: 'pointer', padding: '3px 6px',
+                              display: 'flex', alignItems: 'center'
+                            }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="grid-campos-equipo-lote con-precio">
+                          <div className="form-campo-rapido">
+                            <label>Número de Serie</label>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <input
+                                placeholder="Escanear o ingresar serial"
+                                value={fila.serial}
+                                onChange={(e) => handleFilaNuevoEdicionChange(e, fila.id, 'serial')}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    buscarSerialEnEdicion(fila.id, fila.serial);
+                                  }
+                                }}
+                                onBlur={() => buscarSerialEnEdicion(fila.id, fila.serial)}
+                                autoCapitalize="characters"
+                                style={{
+                                  flex: 1, minWidth: 0,
+                                  borderColor: (duplicadosNuevosEdicion.has(fila.id) || fila.yaDespachado) ? '#ef4444' : undefined,
+                                  background: (duplicadosNuevosEdicion.has(fila.id) || fila.yaDespachado) ? 'rgba(239,68,68,0.08)' : undefined
+                                }}
+                              />
+                              <button
+                                type="button"
+                                title="Escanear código de barras o QR"
+                                onClick={() => escanearSerialEnEdicion(fila.id)}
+                                style={{
+                                  background: '#3397d1', color: 'white', border: 'none', padding: '8px 12px',
+                                  borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}
+                              >
+                                <QrCode size={18} />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="form-campo-rapido">
+                            <label>Modelo</label>
+                            <input
+                              placeholder="Ej: ThinkPad E14"
+                              value={fila.modelo}
+                              onChange={(e) => handleFilaNuevoEdicionChange(e, fila.id, 'modelo')}
+                            />
+                          </div>
+                          <div className="form-campo-rapido campo-precio-equipo-lote">
+                            <label>Precio de este equipo (S/)</label>
+                            <input
+                              type="number" step="0.01" min="0" inputMode="decimal"
+                              placeholder="0.00"
+                              value={fila.precio}
+                              onChange={(e) => handleFilaNuevoEdicionChange(e, fila.id, 'precio')}
+                            />
+                          </div>
+                        </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={agregarFilaEquipoNuevo}
+                    style={{
+                      background: 'rgba(0,255,127,0.08)', border: '1px dashed rgba(0,255,127,0.6)',
+                      color: '#00ff7f', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
+                      fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                    }}
+                  >
+                    <PlusCircle size={16} /> Agregar equipo
+                  </button>
+                </div>
+              </div>
+
+              <div className="botones-rapido">
+                {/* 🛡️ Aviso visible mientras haya conflictos en las filas nuevas */}
+                {hayConflictoNuevosEdicion && (
+                  <span style={{
+                    marginRight: 'auto', alignSelf: 'center',
+                    color: '#ef4444', fontSize: '0.78rem', fontWeight: 'bold'
+                  }}>
+                    ⚠️ Revisa los equipos marcados en rojo (repetidos o ya despachados) para poder guardar.
+                  </span>
+                )}
+                <button type="button" className="btn-cancelar-rapido" onClick={() => cerrarEdicionSalida()}>
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-guardar-rapido"
+                  disabled={cargandoEdicion || hayConflictoNuevosEdicion}
+                  title={hayConflictoNuevosEdicion ? 'Hay equipos con serial repetido o que ya pertenecen a otra salida' : 'Guardar los cambios (y los equipos agregados) sin revertir la salida'}
+                >
+                  {cargandoEdicion ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {mostrarModalVentaRapida && createPortal(
         <div 
           className="overlay-informe-leonidas" 
@@ -1704,14 +2519,25 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                 <input
                   id="cantidad_lote"
                   name="cantidad_lote"
-                  type="number"
-                  min="1"
-                  step="1"
+                  type="text"
                   inputMode="numeric"
                   placeholder="Ej: 1, 2, 5, 10..."
-                  value={cantidadEquiposLote}
-                  onChange={(e) => cambiarCantidadEquiposLote(e.target.value)}
-                  onBlur={() => cambiarCantidadEquiposLote(cantidadEquiposLote)}
+                  value={cantidadInputTexto}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setCantidadInputTexto(val);
+                    if (val !== '') {
+                      setCantidadEquiposLote(Math.max(1, parseInt(val, 10)));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (cantidadInputTexto === '') {
+                      setCantidadInputTexto('1');
+                      setCantidadEquiposLote(1);
+                    } else {
+                      cambiarCantidadEquiposLote(cantidadInputTexto);
+                    }
+                  }}
                 />
               </div>
 
@@ -1816,13 +2642,24 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                 <div className="scroll-equipos-lote">
                   {equiposLote.map((equipo, index) => {
                     const estadoSerial = estadoSerialLote[index];
+                    // 🛡️ ¿Este S/N ya está repetido en otra fila del lote?
+                    const estaRepetido = indicesSerialRepetido.has(index);
                     return (
-                    <div className="fila-equipo-lote" key={`equipo-lote-${index}`}>
+                    <div
+                      className="fila-equipo-lote"
+                      key={`equipo-lote-${index}`}
+                      style={estaRepetido ? { borderColor: '#ef4444', boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.5)' } : undefined}
+                    >
                       <div className="cabecera-equipo-lote">
                         <span className="badge-equipo-lote">Equipo #{index + 1}</span>
-                        {estadoSerial === 'encontrado' && (
+                        {estadoSerial === 'encontrado' && !estaRepetido && (
                           <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#00ff7f' }}>
                             ✓ Modelo autocompletado desde el inventario
+                          </span>
+                        )}
+                        {estaRepetido && (
+                          <span style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#ef4444' }}>
+                            ⛔ N° de serie repetido en este lote
                           </span>
                         )}
                       </div>
@@ -1841,9 +2678,9 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                               style={{
                                 flex: 1,
                                 minWidth: 0,
-                                // Borde rojo + aviso cuando el serial no existe en el inventario
-                                borderColor: estadoSerial === 'no-encontrado' ? '#ef4444' : undefined,
-                                background: estadoSerial === 'no-encontrado' ? 'rgba(239, 68, 68, 0.08)' : undefined
+                                // Borde rojo + aviso: serial repetido en el lote o inexistente en inventario
+                                borderColor: (estaRepetido || estadoSerial === 'no-encontrado') ? '#ef4444' : undefined,
+                                background: (estaRepetido || estadoSerial === 'no-encontrado') ? 'rgba(239, 68, 68, 0.08)' : undefined
                               }}
                             />
                             <button
@@ -1865,6 +2702,11 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                           {estadoSerial === 'no-encontrado' && (
                             <small style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>
                               ⚠ Número de serie no encontrado en inventario. Puedes escribir el modelo manualmente.
+                            </small>
+                          )}
+                          {estaRepetido && (
+                            <small style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>
+                              ⚠️ Este N° de serie ya está puesto en otra fila del lote: cada equipo debe tener uno distinto.
                             </small>
                           )}
                         </div>
@@ -1904,8 +2746,22 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
               </div>{/* <-- FIN DEL CUERPO DESPLAZABLE (.cuerpo-scroll-lote) */}
 
               <div className="botones-rapido">
+                {/* 🛡️ Aviso visible mientras haya S/N repetidos en el lote */}
+                {haySerialRepetidoEnLote && (
+                  <span style={{
+                    marginRight: 'auto', alignSelf: 'center',
+                    color: '#ef4444', fontSize: '0.78rem', fontWeight: 'bold'
+                  }}>
+                    ⚠️ Hay N° de serie repetidos: corrígelos para poder guardar.
+                  </span>
+                )}
                 <button type="button" className="btn-cancelar-rapido" onClick={() => setMostrarModalVentaRapida(false)}>Cancelar</button>
-                <button type="submit" className="btn-guardar-rapido" disabled={cargandoVentaRapida}>
+                <button
+                  type="submit"
+                  className="btn-guardar-rapido"
+                  disabled={cargandoVentaRapida || haySerialRepetidoEnLote}
+                  title={haySerialRepetidoEnLote ? 'Hay números de serie repetidos en el lote' : 'Registrar la salida del lote'}
+                >
                   {cargandoVentaRapida ? 'Guardando...' : 'Guardar Venta'}
                 </button>
               </div>

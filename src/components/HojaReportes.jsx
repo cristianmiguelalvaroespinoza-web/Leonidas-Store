@@ -8,6 +8,8 @@ import {
 import * as XLSX from 'xlsx-js-style';
 import { db } from '../firebase'; // Firestore para la edición masiva
 import { writeBatch, doc as fsDoc } from 'firebase/firestore';
+// 🛠️ Renombrado visual del estado "PENDIENTE" → "REPARACIÓN" (el valor guardado no cambia)
+import { esReparacion, etiquetaEstado } from '../utils/estadosEquipo';
 
 // IMPORTACIÓN DEL CSS MODULE
 import styles from './HojaReportes.module.css';
@@ -303,6 +305,8 @@ const toggleModelo = (clave) => {
   const [filtroUsuarioAuditoria, setFiltroUsuarioAuditoria] = useState('TODOS'); // <-- NUEVO: auditar por usuario (salidas)
   const [filtroMarcaAuditoria, setFiltroMarcaAuditoria] = useState('');
   const [filtroModeloAuditoria, setFiltroModeloAuditoria] = useState('');
+  // Detecta si el Excel subido tiene SOLO columna de seriales (sin MARCA/MODELO)
+  const [excelSoloSeriales, setExcelSoloSeriales] = useState(false);
   // Resultados del cruce
   const [pestanaAuditoria, setPestanaAuditoria] = useState('coincidentes');
   const [resultadosAuditoria, setResultadosAuditoria] = useState({ coincidentes: [], faltantesSistema: [], faltantesExcel: [], revisar: [] });
@@ -491,37 +495,49 @@ const toggleModelo = (clave) => {
         }
       }
 
+      let indiceSerial, indiceMarca, indiceModelo, filaInicioDatos;
+
       if (filaEncabezado === -1) {
-        setResultadosAuditoria({ coincidentes: [], faltantesSistema: [], faltantesExcel: [], revisar: [] });
-        setNotificacionMasiva({ tipo: 'error', texto: `⚠️ No se detectó una fila de encabezados (SERIAL, MARCA, MODELO, ESTADO) en las primeras 10 filas de "${archivo.name}".` });
-        return;
+        // No se detectÃ³ fila de encabezados: asumir que TODAS las filas son datos
+        // y la primera columna (Ã­ndice 0) contiene los nÃºmeros de serie.
+        // Esto permite auditar Excel improvisados con solo una columna de seriales.
+        setExcelSoloSeriales(true);
+        indiceSerial = 0;
+        indiceMarca = -1;
+        indiceModelo = -1;
+        filaInicioDatos = 0;
+      } else {
+        // 3) NORMALIZACIÃ“N Y LIMPIEZA DE NOMBRES DE COLUMNAS (mayÃºsculas, sin espacios)
+        const encabezados = (Array.isArray(filasCrudas[filaEncabezado]) ? filasCrudas[filaEncabezado] : [])
+          .map(normalizarEncabezado);
+
+        // SinÃ³nimos / variaciones aceptadas para la columna del nÃºmero de serie
+        const SINONIMOS_SERIAL = ['SERIAL', 'S/N', 'N/S', 'NÂ° SERIE', 'NUMERO DE SERIE', 'NÃšMERO DE SERIE', 'SERIE'];
+        indiceSerial = encabezados.findIndex(nombre =>
+          SINONIMOS_SERIAL.some(sinonimo => nombre === sinonimo)
+          || nombre.includes('SERIAL')
+          || nombre.includes('SERIE')
+        );
+
+        if (indiceSerial === -1) {
+          setResultadosAuditoria({ coincidentes: [], faltantesSistema: [], faltantesExcel: [], revisar: [] });
+          setNotificacionMasiva({ tipo: 'error', texto: `⚠️ No se encontrÃ³ una columna SERIAL en "${archivo.name}". Columnas: ${encabezados.filter(Boolean).slice(0, 8).join(', ')}` });
+          return;
+        }
+
+        // Columnas auxiliares MARCA y MODELO (tambiÃ©n normalizadas)
+        indiceMarca = encabezados.findIndex(n => n.includes('MARCA'));
+        indiceModelo = encabezados.findIndex(n => n.includes('MODELO'));
+
+        // Detectar si el Excel trae SOLO la columna de seriales (sin MARCA ni MODELO)
+        setExcelSoloSeriales(indiceMarca === -1 && indiceModelo === -1);
+
+        filaInicioDatos = filaEncabezado + 1;
       }
 
-      // 3) NORMALIZACIÓN Y LIMPIEZA DE NOMBRES DE COLUMNAS (mayúsculas, sin espacios)
-      const encabezados = (Array.isArray(filasCrudas[filaEncabezado]) ? filasCrudas[filaEncabezado] : [])
-        .map(normalizarEncabezado);
-
-      // Sinónimos / variaciones aceptadas para la columna del número de serie
-      const SINONIMOS_SERIAL = ['SERIAL', 'S/N', 'N/S', 'N° SERIE', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE'];
-      const indiceSerial = encabezados.findIndex(nombre =>
-        SINONIMOS_SERIAL.some(sinonimo => nombre === sinonimo)
-        || nombre.includes('SERIAL')
-        || nombre.includes('SERIE')
-      );
-
-      if (indiceSerial === -1) {
-        setResultadosAuditoria({ coincidentes: [], faltantesSistema: [], faltantesExcel: [], revisar: [] });
-        setNotificacionMasiva({ tipo: 'error', texto: `⚠️ No se encontró una columna SERIAL en "${archivo.name}". Columnas: ${encabezados.filter(Boolean).slice(0, 8).join(', ')}` });
-        return;
-      }
-
-      // Columnas auxiliares MARCA y MODELO (también normalizadas)
-      const indiceMarca = encabezados.findIndex(n => n.includes('MARCA'));
-      const indiceModelo = encabezados.findIndex(n => n.includes('MODELO'));
-
-      // 4) PROCESAMIENTO DE DATOS: extraer las filas POR DEBAJO del encabezado detectado
+      // 4) PROCESAMIENTO DE DATOS: extraer las filas como seriales
       const filasExcel = filasCrudas
-        .slice(filaEncabezado + 1)
+        .slice(filaInicioDatos)
         .map((fila, i) => {
           const obtenerCelda = (indice) => (indice >= 0 && Array.isArray(fila)) ? String(fila[indice] ?? '').trim() : '';
           return {
@@ -575,7 +591,8 @@ const toggleModelo = (clave) => {
             serial: f.serial,
             excel: f,
             bd: enBd,
-            coincideModelo: normalizarSerialAudit(f.modelo) === normalizarSerialAudit(enBd.modelo)
+            // Si el Excel no trae columna MODELO (solo seriales), damos por válida la coincidencia
+            coincideModelo: indiceModelo === -1 || normalizarSerialAudit(f.modelo) === normalizarSerialAudit(enBd.modelo)
           });
           serialesEmparejados.add(normalizarSerialAudit(enBd.serial));
           return;
@@ -757,7 +774,7 @@ const toggleModelo = (clave) => {
               ? `SIN SERIE EN FÍSICO (sticker arrancado). Posibles equipos: ${r.candidatos.map(c => c.serial).join(' | ')}`
               : 'SIN SERIE EN FÍSICO (sticker arrancado). Sin candidatos por modelo')
           : r.tipo === 'otro-estado'
-            ? `SERIAL EN SISTEMA PERO EN OTRO ESTADO (${(r.bd?.estado || '—').toUpperCase()})`
+            ? `SERIAL EN SISTEMA PERO EN OTRO ESTADO (${r.bd?.estado ? etiquetaEstado(r.bd.estado) : '—'})`
             : `POSIBLE COINCIDENCIA (a ${r.distancia} carácter(es)): físico "${r.serial}" ↔ sistema "${r.bd?.serial || '—'}"`;
         filas.push({
           'N°': contador,
@@ -1022,7 +1039,9 @@ const toggleModelo = (clave) => {
       return;
     }
 
-    const resumenCambios = Object.keys(cambios).join(', ');
+    const resumenCambios = Object.entries(cambios)
+      .map(([campo, valor]) => (campo === 'estado' ? `estado → ${etiquetaEstado(valor)}` : campo))
+      .join(', ');
     if (!window.confirm(`¿Seguro que quieres aplicar estos cambios a ${seleccionadosMasivos.size} equipo(s)?\n\nCampos: ${resumenCambios}\n\nEsta acción modifica la base de datos.`)) {
       return;
     }
@@ -1059,19 +1078,8 @@ const toggleModelo = (clave) => {
   };
   const esVendedor = usuarioLogueado?.rol === 'vendedor';
   const esAdmin2 = usuarioLogueado?.rol === 'admin_2' || usuarioLogueado?.rol === 'super_admin'; 
-  const stats2026 = useMemo(() => {
-    const lista = laptops || [];
-    const ventas2026 = lista.filter(l =>
-      l && String(fechaVentaDe(l)).includes('2026') && (l.estado?.toUpperCase().trim() === 'VENDIDO')
-    );
-
-    const recaudado = ventas2026.reduce((acc, curr) => acc + (Number(curr.precio) || 0), 0);
-    const vendidos = ventas2026.length;
-    const enTienda = lista.filter(l => (l.estado || 'STOCK').toUpperCase().trim() === 'STOCK').length;
-    const utilidadTotal = ventas2026.reduce((acc, curr) => acc + (Number(curr.utilidad) || 0), 0);
-
-    return { recaudado, vendidos, enTienda, utilidadTotal };
-  }, [laptops]);
+  // 📊 Las stats del MÓDULO DE STOCK se calculan más abajo, sobre `laptopsPorAmbito`,
+  //    para que respondan al filtro de usuario / lote / fechas / búsqueda activo.
 
   const limpiarFiltros = () => {
     setBusqueda("");
@@ -1083,7 +1091,13 @@ const toggleModelo = (clave) => {
   };
 
  // --- LÓGICA DE FILTRADO ACTUALIZADA ---
-  const datosFiltrados = (laptops || []).filter(d => {
+  /* ================================================================================
+     🎯 "pasaAmbito" = filtros de ALCANCE (usuario, lote, fechas y búsqueda) SIN la
+     pestaña de estado. Lo comparten la TABLA GENERAL y el MÓDULO DE STOCK, para
+     que las tarjetas y los contadores cambien según el usuario filtrado
+     (ej. TIENDA PRINCIPAL = 6 equipos, 🏢 GENERAL = 149 equipos).
+     ================================================================================ */
+  const pasaAmbito = (d) => {
     if (!d) return false;
 
     // 1. Filtro por Vendedor (usa el mismo mapeo que la etiqueta visual "GENERAL"/"TIENDA PRINCIPAL")
@@ -1157,11 +1171,7 @@ const toggleModelo = (clave) => {
       }
     }
 
-    // 4. Filtro por Estado (TODOS, STOCK, VENDIDOS) — normalizado para no perder equipos por mayúsculas/espacios
-    const estadoActual = (d.estado || "STOCK").toUpperCase().trim();
-    if (filtroEstado !== 'TODOS' && estadoActual !== filtroEstado) return false;
-
-    // 5. Filtro por Texto (incluye el responsable real y sus alias visuales GENERAL / TIENDA PRINCIPAL)
+    // 4. Filtro por Texto (incluye el responsable real y sus alias visuales GENERAL / TIENDA PRINCIPAL)
     const texto = busqueda.toLowerCase().trim();
     if (!texto) return true;
     const responsableTexto = (d.responsable && typeof d.responsable === 'object')
@@ -1169,6 +1179,43 @@ const toggleModelo = (clave) => {
       : (d.responsable ?? d.vendedor ?? '');
     const caracteristicas = `${d.marca || ''} ${d.modelo || ''} ${d.serial || ''} ${d.procesador || ''} ${d.generacion || d.gen || ''} ${d.ram || ''} ${d.gpu || ''} ${d.almacenamiento || d.disco || ''} ${responsableTexto} ${nombreVendedorVisible(responsableTexto)} ${d.lote || ''} ${d.n_pedido || ''} ${textoComentario(d)}`.toLowerCase();
     return caracteristicas.includes(texto);
+  };
+
+  // 📦 Equipos dentro del ÁMBITO activo (sin la pestaña de estado): lo usan las
+  //    tarjetas del módulo de stock y los contadores de las pestañas.
+  const laptopsPorAmbito = (laptops || []).filter(d => pasaAmbito(d));
+
+  /* --- 📊 MÓDULO DE STOCK: cifras según el ÁMBITO activo -----------------------
+     TOTAL RECAUDADO / GANANCIA REAL / STOCK VENDIDO / STOCK EN TIENDA cambian al
+     elegir usuario, lote, rango de fechas o escribir en el buscador. El desglose
+     siempre es completo (no depende de la pestaña de estado seleccionada). */
+  const listaStats = laptopsPorAmbito;
+  const ventasStats2026 = listaStats.filter(l =>
+    l && String(fechaVentaDe(l)).includes('2026') && (l.estado?.toUpperCase().trim() === 'VENDIDO')
+  );
+  const stats2026 = {
+    recaudado: ventasStats2026.reduce((acc, curr) => acc + (Number(curr.precio) || 0), 0),
+    vendidos: ventasStats2026.length,
+    enTienda: listaStats.filter(l => (l.estado || 'STOCK').toUpperCase().trim() === 'STOCK').length,
+    utilidadTotal: ventasStats2026.reduce((acc, curr) => acc + (Number(curr.utilidad) || 0), 0)
+  };
+
+  // 🔎 Filtros de alcance activos (aviso en la cabecera para no leer cifras a ciegas)
+  const filtrosAmbitoActivos = [];
+  if (filtroVendedor !== 'TODOS') filtrosAmbitoActivos.push(`USUARIO: ${nombreVendedorVisible(filtroVendedor)}`);
+  if (filtroLote !== 'TODOS') filtrosAmbitoActivos.push(`LOTE: 📦 ${filtroLote}`);
+  if (filtroTiempo !== 'TODAS') filtrosAmbitoActivos.push(`TIEMPO: ${filtroTiempo}`);
+  if (String(fechaFiltro || '').trim()) filtrosAmbitoActivos.push(`DÍA: ${fechaFiltro}`);
+  if (String(busqueda || '').trim()) filtrosAmbitoActivos.push(`BÚSQUEDA: "${String(busqueda).trim()}"`);
+
+  // 📋 TABLA GENERAL: ámbito activo + pestaña de estado (TODOS / STOCK / VENDIDOS / REPARACIÓN)
+  const datosFiltrados = laptopsPorAmbito.filter(d => {
+    const estadoActual = (d.estado || "STOCK").toUpperCase().trim();
+    if (filtroEstado !== 'TODOS') {
+      const coincideEstado = esReparacion(filtroEstado) ? esReparacion(estadoActual) : estadoActual === filtroEstado;
+      if (!coincideEstado) return false;
+    }
+    return true;
   });
 
   const exportarExcel = () => {
@@ -1249,7 +1296,7 @@ const toggleModelo = (clave) => {
         // ✅ CORRECCIÓN: La utilidad en el reporte es 0 si no está vendido.
         row['UTILIDAD'] = esVendido ? (item.utilidad || (Number(item.precio) - Number(item.precio_costo)) || 0) : 0;
       }
-      row['ESTADO'] = item.estado || "STOCK";
+      row['ESTADO'] = etiquetaEstado(item.estado); // 🛠️ "PENDIENTE" se exporta como "REPARACIÓN"
       // NOTA: CLIENTE, TELEFONO y COMENTARIO ya no se exportan al Excel
       // (solo existen en la tabla visual).
 
@@ -1260,13 +1307,13 @@ const toggleModelo = (clave) => {
 
     // 📅 FILA 0: TÍTULO DEL REPORTE + FECHA DE IMPRESIÓN.
     // El título refleja el filtro activo en la TABLA GENERAL
-    // (TODOS / STOCK / VENDIDOS / PENDIENTES) y, si aplica, el usuario filtrado.
+    // (TODOS / STOCK / VENDIDOS / EN REPARACIÓN) y, si aplica, el usuario filtrado.
     // Para abrirla, todas las filas existentes (encabezado + datos) se corren una posición hacia abajo.
     const etiquetasEstado = {
       TODOS: 'EXCEL DE TODOS',
       STOCK: 'EXCEL DE STOCK',
       VENDIDO: 'EXCEL DE VENDIDOS',
-      PENDIENTE: 'EXCEL DE PENDIENTES'
+      PENDIENTE: 'EXCEL DE REPARACIÓN'
     };
     const tituloReporte = etiquetasEstado[filtroEstado] || `EXCEL DE ${filtroEstado}`;
     const tituloUsuario = (filtroVendedor && filtroVendedor !== 'TODOS')
@@ -1643,6 +1690,20 @@ const toggleModelo = (clave) => {
   return (
     <div className={styles.reportesContainer}>
       
+      {/* 🔎 AVISO DE ALCANCE: indica qué filtros (usuario/lote/fechas/búsqueda) están
+          determinando las cifras de las tarjetas y de los contadores de pestañas. */}
+      {filtrosAmbitoActivos.length > 0 && (
+        <div style={{
+          margin: '0 0 14px', padding: '9px 14px', borderRadius: '8px',
+          backgroundColor: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.45)',
+          color: '#93c5fd', fontSize: '12.5px', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'
+        }}>
+          🔎 Las cifras y contadores muestran solo: {filtrosAmbitoActivos.join(' · ')}
+          <span style={{ color: '#e2e8f0' }}>({laptopsPorAmbito.length} equipo(s))</span>
+        </div>
+      )}
+
       {esAdmin2 && (
         <div className={styles.contenedorEstadisticasAnuales}>
           <div className={styles.tarjetaAnual} style={{ '--color-borde': '#10b981' }}>
@@ -1666,7 +1727,7 @@ const toggleModelo = (clave) => {
           <div className={styles.tarjetaAnual} style={{ '--color-borde': '#3b82f6' }}>
             <div className={styles.infoTarjeta}>
               <span>📦 STOCK VENDIDO TOTAL</span>
-              <div className={stats2026.valorContainer}>
+              <div className={styles.valorContainer}>
                 <h3>{stats2026.vendidos}</h3>
                 <span className={styles.unidad}>Unds.</span>
               </div>
@@ -1877,11 +1938,11 @@ const toggleModelo = (clave) => {
         
         {/* Pestañas originales */}
         <div className={styles.estadoTabs} style={{ margin: 0 }}>
-          <button onClick={() => setFiltroEstado('TODOS')} className={filtroEstado === 'TODOS' ? styles.active : ''}>📋 TODOS ({laptops?.length || 0})</button>
-          <button onClick={() => setFiltroEstado('STOCK')} className={filtroEstado === 'STOCK' ? `${styles.active} ${styles.stock}` : ''}>🟢 STOCK ({laptops.filter(l => (l.estado || 'STOCK').toUpperCase().trim() === 'STOCK').length})</button>
-          <button onClick={() => setFiltroEstado('VENDIDO')} className={filtroEstado === 'VENDIDO' ? `${styles.active} ${styles.vendido}` : ''}>🔴 VENDIDOS / SALIDA ({laptops.filter(l => (l.estado || '').toUpperCase().trim() === 'VENDIDO').length})</button>
+          <button onClick={() => setFiltroEstado('TODOS')} className={filtroEstado === 'TODOS' ? styles.active : ''}>📋 TODOS ({laptopsPorAmbito.length})</button>
+          <button onClick={() => setFiltroEstado('STOCK')} className={filtroEstado === 'STOCK' ? `${styles.active} ${styles.stock}` : ''}>🟢 STOCK ({laptopsPorAmbito.filter(l => (l.estado || 'STOCK').toUpperCase().trim() === 'STOCK').length})</button>
+          <button onClick={() => setFiltroEstado('VENDIDO')} className={filtroEstado === 'VENDIDO' ? `${styles.active} ${styles.vendido}` : ''}>🔴 VENDIDOS / SALIDA ({laptopsPorAmbito.filter(l => (l.estado || '').toUpperCase().trim() === 'VENDIDO').length})</button>
           <button onClick={() => setFiltroEstado('PENDIENTE')} className={filtroEstado === 'PENDIENTE' ? `${styles.active} ${styles.pendiente}` : ''}>
-            🟡 PENDIENTES POR RECIBIR ({laptops.filter(l => (l.estado || '').toUpperCase().trim() === 'PENDIENTE').length})
+            🛠️ EN REPARACIÓN ({laptopsPorAmbito.filter(l => esReparacion(l.estado)).length})
           </button>
         </div>
 
@@ -2052,6 +2113,24 @@ const toggleModelo = (clave) => {
             <option value="Ray">🏪 TIENDA PRINCIPAL</option>
           </select>
 
+          {/* 🛠️ ACCESO RÁPIDO: manda los seleccionados a REPARACIÓN.
+              Solo preselecciona el campo "Estado"; el cambio se confirma con
+              "✅ Aplicar a seleccionados". Vuelve a pulsar para cancelarlo. */}
+          <button
+            onClick={() => setCamposMasivos(prev => ({ ...prev, estado: prev.estado === 'PENDIENTE' ? '' : 'PENDIENTE' }))}
+            title="Marcar los seleccionados como EN REPARACIÓN (estado PENDIENTE). Recuerda pulsar '✅ Aplicar a seleccionados'."
+            style={{
+              height: '36px', padding: '0 14px', borderRadius: '6px',
+              border: camposMasivos.estado === 'PENDIENTE' ? '1px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.6)',
+              backgroundColor: camposMasivos.estado === 'PENDIENTE' ? '#f59e0b' : 'rgba(245, 158, 11, 0.15)',
+              color: camposMasivos.estado === 'PENDIENTE' ? '#0f172a' : '#f59e0b',
+              fontWeight: 'bold', fontSize: '12px', cursor: 'pointer',
+              whiteSpace: 'nowrap', flexShrink: 0
+            }}
+          >
+            🛠️ Enviar a Reparación
+          </button>
+
           {/* ✏️ EDITAR CAMPOS: se aplica a los equipos marcados con el checkbox.
               Solo los campos con valor se guardan; los vacíos se ignoran. */}
           <div style={{
@@ -2065,13 +2144,13 @@ const toggleModelo = (clave) => {
             <select
               value={camposMasivos.estado}
               onChange={(e) => setCamposMasivos(prev => ({ ...prev, estado: e.target.value }))}
-              title="Cambiar el estado de los seleccionados"
+              title="Cambiar el estado de los seleccionados (REPARACIÓN = estado PENDIENTE en la base)"
               style={{ height: '36px', padding: '0 8px', borderRadius: '6px', border: '1px solid #334155', backgroundColor: '#1e293b', color: '#ffffff', fontSize: '12px', cursor: 'pointer', outline: 'none', width: '150px' }}
             >
               <option value="">Estado...</option>
               <option value="STOCK">🟢 STOCK</option>
               <option value="VENDIDO">🔴 VENDIDO</option>
-              <option value="PENDIENTE">🟡 PENDIENTE</option>
+              <option value="PENDIENTE">🛠️ REPARACIÓN</option>
             </select>
             <input
               value={camposMasivos.marca}
@@ -2337,7 +2416,7 @@ const toggleModelo = (clave) => {
 
                 // --- MOTOR DE MODELOS Y FILAS ORIGINALES INTACTOS ---
                 const estadoStr = (item.estado || "STOCK").toUpperCase();
-                const colorEstado = estadoStr === 'VENDIDO' ? '#ef4444' : estadoStr === 'SEPARADO' || estadoStr === 'PENDIENTE' ? '#f59e0b' : '#10b981';
+                const colorEstado = estadoStr === 'VENDIDO' ? '#ef4444' : estadoStr === 'SEPARADO' || esReparacion(estadoStr) ? '#f59e0b' : '#10b981';
                 const tienePrecio = item.precio && Number(item.precio) > 0;
                 const tieneFotos = item.imagenes && item.imagenes.length > 0;
 
@@ -2482,7 +2561,7 @@ const toggleModelo = (clave) => {
                   </td>}
                   <td style={{ ...estiloCelda, textAlign: 'center', padding: '0px 4px' }}>
                     <span style={{ color: colorEstado, fontWeight: 'bold', fontSize: '10px', border: `1px solid ${colorEstado}`, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase' }}>
-                      {estadoStr}
+                      {etiquetaEstado(estadoStr)}
                     </span>
                   </td>
                   <td style={estiloCelda}>
@@ -2579,6 +2658,18 @@ const toggleModelo = (clave) => {
                   <> (solo equipos ya despachados, igual que el Historial de Salidas)</>
                 )}.
               </small>
+
+              {/* ---------- BANNER EXCEL SOLO SERIALES ---------- */}
+              {nombreArchivo && excelSoloSeriales && (
+                <div className={styles.auditoriaNota} style={{ background: '#fef3c7', border: '1px solid #d97706', borderRadius: '6px', padding: '10px', margin: '12px 0' }}>
+                  <strong>ðŸ“‚ Excel detectado: solo nÃºmeros de serie</strong>
+                  <br />
+                  El archivo no contiene columnas de MARCA ni MODELO, por lo que la verificaciÃ³n se harÃ¡
+                  Únicamente por nÃºmero de serie contra el inventario filtrado.
+                  <br />
+                  <em>Filtros activos: Estado={filtroEstadoAuditoria} Â· Marca={filtroMarcaAuditoria || '—'} Â· Modelo={filtroModeloAuditoria || '—'} Â· Usuario={filtroUsuarioAuditoria}</em>
+                </div>
+              )}
 
               {/* ---------- ZONA DRAG & DROP ---------- */}
               <label
@@ -2708,7 +2799,7 @@ const toggleModelo = (clave) => {
                             <td>{etiquetaUsuarioAuditoria(r.bd)}</td>
                             <td>{r.bd.marca || '—'}</td>
                             <td>{r.bd.modelo || '—'}</td>
-                            <td>{(r.bd.estado || 'STOCK').toUpperCase()}</td>
+                            <td>{etiquetaEstado(r.bd.estado)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2741,11 +2832,11 @@ const toggleModelo = (clave) => {
                               )}
                               {r.tipo === 'sin-serie' && (
                                 r.candidatos?.length
-                                  ? <>Sticker ilegible. Equipos del sistema con ese modelo: {r.candidatos.map(c => `${c.serial} (${(c.estado || 'STOCK').toUpperCase()})`).join(' · ')}</>
+                                  ? <>Sticker ilegible. Equipos del sistema con ese modelo: {r.candidatos.map(c => `${c.serial} (${etiquetaEstado(c.estado)})`).join(' · ')}</>
                                   : <>Sticker ilegible y sin equipos del sistema con ese modelo.</>
                               )}
                               {r.tipo === 'otro-estado' && (
-                                <>En el sistema está en estado <strong>{(r.bd?.estado || '—').toUpperCase()}</strong> ({r.bd?.marca || '—'} {r.bd?.modelo || '—'}), por eso no encaja con el filtro actual.</>
+                                <>En el sistema está en estado <strong>{r.bd?.estado ? etiquetaEstado(r.bd.estado) : '—'}</strong> ({r.bd?.marca || '—'} {r.bd?.modelo || '—'}), por eso no encaja con el filtro actual.</>
                               )}
                             </td>
                           </tr>

@@ -773,7 +773,7 @@ const RegistroVentasView = ({
             <div className={styles.campo}>
               <label>ESTADO</label>
               <select name="estado" value={form.estado} onChange={manejarCambio}>
-                {["STOCK", "VENDIDO", "PENDIENTE"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                {[["STOCK", "STOCK"], ["VENDIDO", "VENDIDO"], ["PENDIENTE", "REPARACIÓN"]].map(([valor, etiqueta]) => <option key={valor} value={valor}>{etiqueta}</option>)}
               </select>
             </div>
             <div className={styles.campo}>
