@@ -330,7 +330,8 @@ const [verPassword, setVerPassword] = useState(false);
       ram: lap.ram || "",
       precio: lap.precio || "",
       serial: lap.serial || "",
-      cantidad: 1
+      cantidad: 1,
+      responsable: (lap.responsable || "").toUpperCase()
     };
 
     const manuales = {};

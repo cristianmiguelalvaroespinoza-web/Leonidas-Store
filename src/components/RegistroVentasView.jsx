@@ -726,19 +726,19 @@ const RegistroVentasView = ({
             <div className={styles.campo}>
               {usuarioLogueado?.rol === 'super_admin' || usuarioLogueado?.nombre?.toUpperCase().includes('PIA') ? (
                 <>
-                  <label style={{ color: '#00ff7f', fontWeight: 'bold' }}>REGISTRADO POR</label>
+                  <label style={{ color: '#00ff7f', fontWeight: 'bold' }}>REGISTRADO Y LUGAR POR</label>
                   <select name="responsable" value={form.responsable || ""} onChange={manejarCambio} style={{ border: '1px solid #00ff7f', background: 'rgba(0, 255, 127, 0.05)', color: 'white' }}>
-                    <option value="">Seleccionar Vendedor...</option>
-                    <option value="Jefe">General</option>
-                    <option value="David">David</option>
-                    <option value="Cristofer">Cristofer</option>
-                    <option value="Yael">Yael</option>
-                    <option value="Ray">Tienda Principal</option>
+                    <option value="">Seleccionar usuario...</option>
+                    <option value="JEFE">General</option>
+                    <option value="DAVID">David</option>
+                    <option value="CRISTOFER">Cristofer</option>
+                    <option value="YAEL">Yael</option>
+                    <option value="RAY">Tienda Principal</option>
                   </select>
                 </>
               ) : (
                 <>
-                  <label>REGISTRADO POR</label>
+                  <label>REGISTRADO Y LUGAR POR</label>
                   <input type="text" value={form.responsable || "Pendiente"} disabled className={styles.inputLocked} style={{ background: 'rgba(255,255,255,0.05)', color: '#aaa' }} />
                 </>
               )}
