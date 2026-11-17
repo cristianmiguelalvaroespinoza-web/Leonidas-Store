@@ -965,6 +965,8 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
   const temporizadoresDebounce = useRef({});
   // Espejo de equiposLote para leer el serial vigente dentro de los callbacks
   const equiposLoteRef = useRef(equiposLote);
+  // Refs a los inputs de serial para poder mover el foco al siguiente tras escanear
+  const serialInputsRefs = useRef([]);
   useEffect(() => {
     equiposLoteRef.current = equiposLote;
   }, [equiposLote]);
@@ -1009,6 +1011,17 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       return copia;
     });
   }, []);
+
+  // Mueve el foco al siguiente input de serial si existe
+  const moverFocoASiguienteSerial = (indexActual) => {
+    setTimeout(() => {
+      const siguiente = indexActual + 1;
+      const siguienteInput = document.querySelector(`input[name="serial_${siguiente}"]`);
+      if (siguienteInput) {
+        siguienteInput.focus();
+      }
+    }, 0);
+  };
 
   /**
    * Busca un equipo por número de serie.
@@ -1105,6 +1118,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
       temporizadoresDebounce.current[index] = null;
     }
     completarModeloDesdeSerial(index, e.target.value);
+    moverFocoASiguienteSerial(index);
   };
 
   // onBlur: cierra el ciclo de búsqueda si el usuario ya no sigue escribiendo
@@ -1130,6 +1144,7 @@ const handlePrecioChange = async (id, nuevoPrecio) => {
         temporizadoresDebounce.current[index] = null;
       }
       completarModeloDesdeSerial(index, serial);
+      moverFocoASiguienteSerial(index);
     });
   };
 
@@ -2504,7 +2519,7 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
               <h3>⚡ Registro de SALIDAS Rápida</h3>
               <p>Registra una venta externa para el control de ganancias.</p>
             </div>
-            <form onSubmit={handleGuardarVentaRapida}>
+            <form onSubmit={(e) => e.preventDefault()}>
               {/* ================= CUERPO DESPLAZABLE =================
                   Todo el formulario (cantidad, datos del lote y equipos) vive aquí:
                   si el contenido es más alto que la pantalla, esta zona hace scroll
@@ -2603,7 +2618,7 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                 <div className="form-grid-rapido-3">
                   <div className="form-campo-rapido">
                     <label>Responsable</label>
-                    <input name="responsable" type="text" placeholder="Nombre del responsable" value={ventaRapidaForm.responsable} onChange={handleVentaRapidaChange} required />
+                    <input name="responsable" type="text" placeholder="Nombre del responsable" value={ventaRapidaForm.responsable} onChange={handleVentaRapidaChange} />
                   </div>
                   <div className="form-campo-rapido">
                     <label>DNI (Opcional)</label>
@@ -2669,6 +2684,7 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                           <div style={{ display: 'flex', gap: '5px' }}>
                             <input
                               name={`serial_${index}`}
+                              ref={(el) => { serialInputsRefs.current[index] = el; }}
                               placeholder="Escanear o ingresar serial"
                               value={equipo.serial}
                               onChange={(e) => handleSerialEquipoLoteChange(e, index)}
@@ -2757,8 +2773,9 @@ WebkitOverflowScrolling: 'touch' // <--- ESTO HACE QUE EL SCROLL SEA FLUIDO EN E
                 )}
                 <button type="button" className="btn-cancelar-rapido" onClick={() => setMostrarModalVentaRapida(false)}>Cancelar</button>
                 <button
-                  type="submit"
+                  type="button"
                   className="btn-guardar-rapido"
+                  onClick={handleGuardarVentaRapida}
                   disabled={cargandoVentaRapida || haySerialRepetidoEnLote}
                   title={haySerialRepetidoEnLote ? 'Hay números de serie repetidos en el lote' : 'Registrar la salida del lote'}
                 >
