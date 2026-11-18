@@ -1714,6 +1714,55 @@
 
   .modal-panel-venta-rapida .cabecera-equipo-lote {
     margin-bottom: 6px;
+
+/* ============================================================
+   SCROLL SUPERIOR PARA LA TABLA DE VENTAS (AlmacenTabla)
+   ============================================================ */
+.ventas-scroll-arriba {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: block !important;
+  margin-bottom: 6px !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.55) rgba(15, 23, 42, 0.55);
+}
+
+/* Scrollbar superior en Chrome / Edge / Safari */
+.ventas-scroll-arriba::-webkit-scrollbar {
+  height: 10px;
+}
+
+.ventas-scroll-arriba::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.55);
+  border-radius: 999px;
+}
+
+.ventas-scroll-arriba::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.45);
+  border-radius: 999px;
+}
+
+.ventas-scroll-arriba::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.75);
+}
+
+.ventas-scroll-arriba::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 255, 127, 0.6);
+}
+
+/* Botones de flecha del scroll superior */
+.ventas-scroll-arriba::-webkit-scrollbar-button:single-button {
+  background: rgba(15, 23, 42, 0.55);
+  width: 14px;
+}
+
+.ventas-scroll-arriba::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  border-radius: 999px 0 0 999px;
+}
+
+.ventas-scroll-arriba::-webkit-scrollbar-button:single-button:horizontal:increment {
+  border-radius: 0 999px 999px 0;
+}
   }
 }
 

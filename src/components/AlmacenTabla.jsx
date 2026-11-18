@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Añadimos useState
+import React, { useState, useRef, useEffect } from 'react'; // Añadimos useState, useRef y useEffect
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -39,6 +39,37 @@ const AlmacenTabla = ({
 }) => {
   const [diasExpandidos, setDiasExpandidos] = React.useState({});
   
+  // --- REFS PARA SCROLL SUPERIOR DE LA TABLA DE VENTAS ---
+  const refScrollArriba = useRef(null);
+  const refScrollTabla = useRef(null);
+  const refRellenoArriba = useRef(null);
+
+  // Sincroniza el scroll de la tabla inferior cuando se mueve el scroll superior
+  const sincronizarScrollDesdeArriba = () => {
+    if (refScrollArriba.current && refScrollTabla.current) {
+      refScrollTabla.current.scrollLeft = refScrollArriba.current.scrollLeft;
+    }
+  };
+
+  // Sincroniza el scroll superior cuando se mueve la tabla inferior
+  const sincronizarScrollDesdeTabla = () => {
+    if (refScrollArriba.current && refScrollTabla.current) {
+      refScrollArriba.current.scrollLeft = refScrollTabla.current.scrollLeft;
+    }
+  };
+
+  // Iguala el ancho del relleno fantasma superior al ancho real de la tabla
+  useEffect(() => {
+    const igualarAncho = () => {
+      const tabla = refScrollTabla.current?.querySelector('table');
+      if (refRellenoArriba.current && tabla) {
+        refRellenoArriba.current.style.width = `${tabla.scrollWidth}px`;
+      }
+    };
+    igualarAncho();
+    window.addEventListener('resize', igualarAncho);
+    return () => window.removeEventListener('resize', igualarAncho);
+  }, []);
   const toggleDia = (dia) => {
     setDiasExpandidos(prev => ({ 
       ...prev, 
@@ -166,7 +197,17 @@ const AlmacenTabla = ({
 
   return (
     <>
-      <div className="table-responsive-wrapper">
+      <div
+        ref={refScrollArriba}
+        onScroll={sincronizarScrollDesdeArriba}
+        className="table-responsive-wrapper ventas-scroll-arriba"
+        style={{ marginBottom: '6px' }}
+        title="Desliza aquí para mover la tabla sin bajar hasta abajo"
+      >
+        {/* Pista fantasma: solo ocupa el ancho de la tabla para dar la barra superior */}
+        <div ref={refRellenoArriba} style={{ height: '1px' }} />
+      </div>
+      <div className="table-responsive-wrapper" ref={refScrollTabla} onScroll={sincronizarScrollDesdeTabla}>
         <table className="excel-table" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0f172a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1e293b', borderBottom: '2px solid #334155' }}>

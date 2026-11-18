@@ -1,6 +1,6 @@
 // Generador de PDF con márgenes @page (12mm laterales) y paginación real para lotes grandes
 import { generarPDFDesdeElemento } from "../utils/generarPDFDocumento";
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom'; // El comprobante se monta en <body> (impresión en 1 sola hoja)
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -54,6 +54,38 @@ const VentasView = ({
   const [destinosDespacho, setDestinosDespacho] = useState({});
   const [mostrarPanelDespacho, setMostrarPanelDespacho] = useState(false);
   const [despachosSeleccionados, setDespachosSeleccionados] = useState([]);
+
+  // --- REFS PARA SCROLL SUPERIOR DE LA TABLA DE VENTAS ---
+  const refScrollArriba = useRef(null);
+  const refScrollTabla = useRef(null);
+  const refRellenoArriba = useRef(null);
+
+  // Sincroniza el scroll de la tabla inferior cuando se mueve el scroll superior
+  const sincronizarScrollDesdeArriba = () => {
+    if (refScrollArriba.current && refScrollTabla.current) {
+      refScrollTabla.current.scrollLeft = refScrollArriba.current.scrollLeft;
+    }
+  };
+
+  // Sincroniza el scroll superior cuando se mueve la tabla inferior
+  const sincronizarScrollDesdeTabla = () => {
+    if (refScrollArriba.current && refScrollTabla.current) {
+      refScrollArriba.current.scrollLeft = refScrollTabla.current.scrollLeft;
+    }
+  };
+
+  // Iguala el ancho del relleno fantasma superior al ancho real de la tabla
+  useEffect(() => {
+    const igualarAncho = () => {
+      const tabla = refScrollTabla.current?.querySelector('table');
+      if (refRellenoArriba.current && tabla) {
+        refRellenoArriba.current.style.width = `${tabla.scrollWidth}px`;
+      }
+    };
+    igualarAncho();
+    window.addEventListener('resize', igualarAncho);
+    return () => window.removeEventListener('resize', igualarAncho);
+  }, []);
 
   const proximoNumeroBoleta = useMemo(() => {
     if (!laptops || laptops.length === 0) return 1;
